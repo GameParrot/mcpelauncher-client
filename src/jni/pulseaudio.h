@@ -1,10 +1,15 @@
 #pragma once
 
 #include <fake-jni/fake-jni.h>
-#include <pulse/simple.h>
+#include <alsa/asoundlib.h>
 
 class AudioDevice : public FakeJni::JObject {
-    pa_simple* s;
+    int err;
+    unsigned int i;
+    snd_pcm_t *handle;
+    snd_pcm_sframes_t frames;
+    int dsize;
+
 
 public:
     DEFINE_CLASS_NAME("org/fmod/AudioDevice")
