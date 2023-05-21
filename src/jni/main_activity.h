@@ -231,13 +231,9 @@ public:
         return -1;
     }
 
-    void lockCursor() {
-        window->setCursorDisabled(true);
-    }
+    void lockCursor();
 
-    void unlockCursor() {
-        window->setCursorDisabled(false);
-    }
+    void unlockCursor();
 
     FakeJni::JLong getUsedMemory();
 
