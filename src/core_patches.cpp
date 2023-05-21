@@ -24,10 +24,12 @@ void CorePatches::install(void* handle) {
 }
 
 void CorePatches::showMousePointer() {
+    WindowCallbacks::mouseLocked = false;
     currentGameWindow->setCursorDisabled(false);
 }
 
 void CorePatches::hideMousePointer() {
+    WindowCallbacks::mouseLocked = true;
     currentGameWindow->setCursorDisabled(true);
 }
 
