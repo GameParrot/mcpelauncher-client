@@ -37,8 +37,12 @@ void WindowCallbacks::registerCallbacks() {
 void WindowCallbacks::setupModLib() {
     std::unordered_map<std::string, void*> syms;
 
-    syms["gamewindow_ismouselocked"] = (void *)+ []() -> bool {
+    syms["gamewindow_ismouselocked"] = (void *)+ [](void* gamewindow) -> bool {
         return mouseLocked;
+    };
+
+    syms["gamewindow_getprimarywindow"] = (void *)+ []() -> void* {
+        return nullptr;
     };
 
     //syms["gamewindow_getinputmode"] = (void *)+ []() -> int {
