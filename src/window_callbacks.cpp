@@ -34,6 +34,24 @@ void WindowCallbacks::registerCallbacks() {
     window.setGamepadAxisCallback(std::bind(&WindowCallbacks::onGamepadAxis, this, _1, _2, _3));
 }
 
+void WindowCallbacks::setupModLib() {
+    std::unordered_map<std::string, void*> syms;
+
+    syms["gamewindow_ismouselocked"] = (void *)+ []() -> bool {
+        return mouseLocked;
+    };
+
+    //syms["gamewindow_getinputmode"] = (void *)+ []() -> int {
+    //    return (int)inputMode;
+    //};
+
+    //syms["gamewindow_sendkeystroke"] = (void *)+ [](int key, int action) {
+    //    onKeyboard((KeyCode)key,(KeyAction)action);
+    //};
+
+    linker::load_library("libmcpelauncher_gamewindow.so", syms);
+}
+
 void WindowCallbacks::startSendEvents() {
     if(!sendEvents) {
         sendEvents = true;
