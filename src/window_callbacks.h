@@ -43,6 +43,8 @@ public:
     static void loadGamepadMappings();
 
     void registerCallbacks();
+    
+    void setupModLib();
 
     void startSendEvents();
 
@@ -70,4 +72,6 @@ public:
 
     static int mapMinecraftToAndroidKey(KeyCode code);
     static int mapGamepadToAndroidKey(GamepadButtonId btn);
+    
+    static bool mouseLocked;
 };
