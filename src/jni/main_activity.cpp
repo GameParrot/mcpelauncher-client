@@ -13,6 +13,8 @@
 #include <climits>
 #include <sstream>
 
+#include "../window_callbacks.h"
+
 #include <log.h>
 
 FakeJni::JInt BuildVersion::SDK_INT = 27;
@@ -243,3 +245,12 @@ void MainActivity::saveFile(std::shared_ptr<FakeJni::JString> fileName) {
     }
 }
 
+void MainActivity::lockCursor() {
+    WindowCallbacks::mouseLocked = true;
+    window->setCursorDisabled(true);
+}
+
+void MainActivity::unlockCursor() {
+    WindowCallbacks::mouseLocked = false;
+    window->setCursorDisabled(false);
+}
