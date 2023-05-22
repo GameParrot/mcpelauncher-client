@@ -31,7 +31,6 @@ private:
         Gamepad,
         Unknown,
     };
-    InputMode inputMode = InputMode::Unknown;
     std::chrono::high_resolution_clock::time_point lastUpdated;
     bool hasInputMode(InputMode want = InputMode::Unknown, bool changeMode = true);
 
@@ -70,4 +69,6 @@ public:
 
     static int mapMinecraftToAndroidKey(KeyCode code);
     static int mapGamepadToAndroidKey(GamepadButtonId btn);
+    
+    InputMode inputMode = InputMode::Unknown;
 };
