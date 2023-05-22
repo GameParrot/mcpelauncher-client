@@ -54,5 +54,13 @@ void CorePatches::loadGameWindowLibrary() {
         return handle->mouseLocked;
     };
 
+    syms["gamewindow_getinputmode"] = (void *)+ [](GameWindowHandle* handle) -> int {
+        return (int)handle->callbacks->inputMode;
+    };
+
+    syms["gamewindow_sendkey"] = (void *)+ [](GameWindowHandle* handle, int key, int action) {
+        handle->callbacks->onKeyboard((KeyCode)key,(KeyAction)action);
+    };
+
     linker::load_library("libmcpelauncher_gamewindow.so", syms);
 }
