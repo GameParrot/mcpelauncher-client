@@ -4,7 +4,7 @@
 #include <mcpelauncher/patch_utils.h>
 #include <log.h>
 
-GameWindowHandle CorePatches::currentGameWindowHandle;
+CorePatches::GameWindowHandle CorePatches::currentGameWindowHandle;
 
 void CorePatches::install(void* handle) {
     // void* ptr = linker::dlsym(handle, "_ZN3web4http6client7details35verify_cert_chain_platform_specificERN5boost4asio3ssl14verify_contextERKSs");
