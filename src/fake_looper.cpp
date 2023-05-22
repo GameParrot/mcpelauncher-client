@@ -75,8 +75,6 @@ void FakeLooper::prepare() {
                                 (AInputQueue *)(void *)&fakeInputQueue);
     associatedWindowCallbacks = std::make_shared<WindowCallbacks>(*associatedWindow, *jniSupport, fakeInputQueue);
     associatedWindowCallbacks->registerCallbacks();
-    associatedWindowCallbacks->setupModLib();
-
 
     CorePatches::setGameWindow(associatedWindow);
     CorePatches::setGameWindowCallbacks(associatedWindowCallbacks);

@@ -4,9 +4,7 @@
 #include <mcpelauncher/patch_utils.h>
 #include <log.h>
 
-std::shared_ptr<GameWindow> CorePatches::currentGameWindow;
-
-std::shared_ptr<WindowCallbacks> CorePatches::currentGameWindowCallbacks;
+GameWindowHandle CorePatches::currentGameWindowHandle;
 
 void CorePatches::install(void* handle) {
     // void* ptr = linker::dlsym(handle, "_ZN3web4http6client7details35verify_cert_chain_platform_specificERN5boost4asio3ssl14verify_contextERKSs");
@@ -24,23 +22,37 @@ void CorePatches::install(void* handle) {
 }
 
 void CorePatches::showMousePointer() {
-    WindowCallbacks::mouseLocked = false;
-    currentGameWindow->setCursorDisabled(false);
+    currentGameWindowHandle.mouseLocked = false;
+    currentGameWindowHandle.window->setCursorDisabled(false);
 }
 
 void CorePatches::hideMousePointer() {
-    WindowCallbacks::mouseLocked = true;
-    currentGameWindow->setCursorDisabled(true);
+    currentGameWindowHandle.mouseLocked = true;
+    currentGameWindowHandle.window->setCursorDisabled(true);
 }
 
 void CorePatches::setFullscreen(void* t, bool fullscreen) {
-    currentGameWindowCallbacks->setFullscreen(fullscreen);
+    currentGameWindowHandle.callbacks->setFullscreen(fullscreen);
 }
 
 void CorePatches::setGameWindow(std::shared_ptr<GameWindow> gameWindow) {
-    currentGameWindow = gameWindow;
+    currentGameWindowHandle.window = gameWindow;
 }
 
 void CorePatches::setGameWindowCallbacks(std::shared_ptr<WindowCallbacks> gameWindowCallbacks) {
-    currentGameWindowCallbacks = gameWindowCallbacks;
+    currentGameWindowHandle.callbacks = gameWindowCallbacks;
+}
+
+void CorePatches::loadGameWindowLibrary() {
+    std::unordered_map<std::string, void*> syms;
+
+    syms["gamewindow_getprimarywindow"] = (void *)+ []() -> GameWindowHandle* {
+        return &currentGameWindowHandle;
+    };
+
+    syms["gamewindow_ismouselocked"] = (void *)+ [](GameWindowHandle* handle) -> bool {
+        return handle->mouseLocked;
+    };
+
+    linker::load_library("libmcpelauncher_gamewindow.so", syms);
 }

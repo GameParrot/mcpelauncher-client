@@ -175,6 +175,7 @@ int main(int argc, char* argv[]) {
     for(auto s = android_symbols; *s; s++)  // stub missing symbols
         android_syms.insert({*s, (void*)+[]() { Log::warn("Main", "Android stub called"); }});
     linker::load_library("libandroid.so", android_syms);
+    CorePatches::loadGameWindowLibrary();
     ModLoader modLoader;
     modLoader.loadModsFromDirectory(PathHelper::getPrimaryDataDirectory() + "mods/", true);
 

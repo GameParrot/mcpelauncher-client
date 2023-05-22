@@ -13,7 +13,7 @@
 #include <climits>
 #include <sstream>
 
-#include "../window_callbacks.h"
+#include "../core_patches.h"
 
 #include <log.h>
 
@@ -246,11 +246,9 @@ void MainActivity::saveFile(std::shared_ptr<FakeJni::JString> fileName) {
 }
 
 void MainActivity::lockCursor() {
-    WindowCallbacks::mouseLocked = true;
-    window->setCursorDisabled(true);
+    CorePatches::hideMousePointer();
 }
 
 void MainActivity::unlockCursor() {
-    WindowCallbacks::mouseLocked = false;
-    window->setCursorDisabled(false);
+    CorePatches::showMousePointer();
 }
