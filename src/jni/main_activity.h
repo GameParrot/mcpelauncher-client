@@ -71,6 +71,11 @@ public:
     DEFINE_CLASS_NAME("android/app/NativeActivity", Activity)
 };
 
+class NetworkMonitor : public FakeJni::JObject {
+public:
+    DEFINE_CLASS_NAME("com/mojang/minecraftpe/NetworkMonitor")
+};
+
 class HardwareInfo : public FakeJni::JObject {
 public:
     DEFINE_CLASS_NAME("com/mojang/minecraftpe/HardwareInformation")
@@ -186,6 +191,11 @@ public:
         return (96 / 25.4f) * 2;
     }
 
+    FakeJni::JInt getPlatformDpi() {
+        // assume 96 DPI for now with GUI scale of 2
+        return 96 * 2;
+    }
+
     std::shared_ptr<FakeJni::JString> createUUID();
 
     std::shared_ptr<FakeJni::JByteArray> getFileDataBytes(std::shared_ptr<FakeJni::JString> path);
@@ -193,6 +203,8 @@ public:
     std::shared_ptr<FakeJni::JArray<FakeJni::JString>> getIPAddresses() {
         return std::make_shared<FakeJni::JArray<FakeJni::JString>>();
     }
+
+    void requestIntegrityToken(std::shared_ptr<FakeJni::JString>);
 
     void launchUri(std::shared_ptr<FakeJni::JString>);
     void share(std::shared_ptr<FakeJni::JString>, std::shared_ptr<FakeJni::JString>, std::shared_ptr<FakeJni::JString>);

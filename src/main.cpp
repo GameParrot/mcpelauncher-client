@@ -33,10 +33,26 @@
 #include "symbols.h"
 #include "core_patches.h"
 #include "thread_mover.h"
+#include <FileUtil.h>
 #include <properties/property.h>
 #include <fstream>
 // For getpid
 #include <unistd.h>
+#include <simpleipc/client/service_client.h>
+#include <daemon_utils/auto_shutdown_service.h>
+
+struct RpcCallbackServer : daemon_utils::auto_shutdown_service {
+
+    RpcCallbackServer(const std::string &path, JniSupport& support) : daemon_utils::auto_shutdown_service(path, daemon_utils::shutdown_policy::never) {
+        add_handler_async("mcpelauncher-client/sendfile", [this, &support](simpleipc::connection& conn, std::string const& method, nlohmann::json const& data, result_handler const& cb) {
+            std::vector<std::string> files = data;
+            for(auto&& file : files) {
+                support.importFile(file);
+            }
+            cb(simpleipc::rpc_json_result::response({}));
+        });
+    }
+};
 
 static size_t base;
 LauncherOptions options;
@@ -46,7 +62,22 @@ void printVersionInfo();
 bool checkFullscreen();
 
 int main(int argc, char* argv[]) {
-    auto windowManager = GameWindowManager::getManager();
+    if(argc == 2 && argv[1][0] != '-') {
+        Log::info("Sendfile", "sending file");
+        simpleipc::client::service_client sc(PathHelper::getPrimaryDataDirectory() + "file_handler");
+        std::vector<std::string> files = { argv[1] };
+        static std::mutex mlock;
+        mlock.lock();
+        auto call = simpleipc::client::rpc_call<int>(sc.rpc("mcpelauncher-client/sendfile", files), [](const nlohmann::json &res) {
+            Log::info("Sendfile", "success");
+            mlock.unlock();
+            return 0;
+        });
+        call.call();
+        mlock.lock();
+        return 0;
+    }
+
     CrashHandler::registerCrashHandler();
     MinecraftUtils::workaroundLocaleBug();
 
@@ -56,6 +87,14 @@ int main(int argc, char* argv[]) {
     argparser::arg<std::string> dataDir(p, "--data-dir", "-dd", "Directory to use for the data");
     argparser::arg<std::string> cacheDir(p, "--cache-dir", "-dc", "Directory to use for cache");
     argparser::arg<std::string> importFilePath(p, "--import-file-path", "-ifp", "File to import to the game");
+    argparser::arg<std::string> v8Flags(p, "--v8-flags", "-v8f", "Flags to pass to the v8 engine of the game",
+#if defined(__APPLE__) && defined(__aarch64__)
+        // Due to problems with running JIT compiled code without using apple specfic workarounds, we just run javascript via jitless
+        "--jitless"
+#else
+        ""
+#endif
+    );
     argparser::arg<int> windowWidth(p, "--width", "-ww", "Window width", 720);
     argparser::arg<int> windowHeight(p, "--height", "-wh", "Window height", 480);
     argparser::arg<bool> disableFmod(p, "--disable-fmod", "-df", "Disables usage of the FMod audio library");
@@ -76,6 +115,8 @@ int main(int argc, char* argv[]) {
     options.useStdinImport = stdinImpt;
 
     FakeEGL::enableTexturePatch = texturePatch.get();
+
+    auto defaultDataDir = PathHelper::getPrimaryDataDirectory();
     if(!gameDir.get().empty())
         PathHelper::setGameDir(gameDir);
     if(!dataDir.get().empty())
@@ -96,6 +137,9 @@ int main(int argc, char* argv[]) {
 
     Log::trace("Launcher", "Loading hybris libraries");
     linker::init();
+    Log::trace("Launcher", "linker loaded");
+    auto windowManager = GameWindowManager::getManager();
+
     // Fix saving to internal storage without write access to /data/*
     // TODO research how this path is constructed
     auto pid = getpid();
@@ -134,6 +178,24 @@ int main(int argc, char* argv[]) {
     }
     if(linker::dlopen(PathHelper::findDataFile("lib/" + std::string(PathHelper::getAbiDir()) + "/libm.so").c_str(), 0) == nullptr) {
         Log::error("LAUNCHER", "Failed to load armhf compat libm.so Original Error: %s", linker::dlerror());
+        return 1;
+    }
+#elif defined(__APPLE__) && defined(__aarch64__)
+    MinecraftUtils::loadLibM();
+    android_dlextinfo extinfo;
+    std::vector<mcpelauncher_hook_t> hooks;
+    for(auto&& entry : libC) {
+        hooks.emplace_back(mcpelauncher_hook_t{entry.first.data(), entry.second});
+    }
+    hooks.emplace_back(mcpelauncher_hook_t{nullptr, nullptr});
+    extinfo.flags = ANDROID_DLEXT_MCPELAUNCHER_HOOKS;
+    extinfo.mcpelauncher_hooks = hooks.data();
+    if(linker::dlopen_ext(PathHelper::findDataFile("lib/" + std::string(PathHelper::getAbiDir()) + "/libc.so").c_str(), 0, &extinfo) == nullptr) {
+        Log::error("LAUNCHER", "Failed to load arm64 variadic compat libc.so Original Error: %s", linker::dlerror());
+        return 1;
+    }
+    if(linker::dlopen(PathHelper::findDataFile("lib/" + std::string(PathHelper::getAbiDir()) + "/liblog.so").c_str(), 0) == nullptr) {
+        Log::error("LAUNCHER", "Failed to load arm64 variadic compat liblog.so Original Error: %s", linker::dlerror());
         return 1;
     }
 #else
@@ -206,6 +268,16 @@ int main(int argc, char* argv[]) {
     Log::info("Launcher", "Game version: %s", MinecraftVersion::getString().c_str());
 
     Log::info("Launcher", "Applying patches");
+    if(v8Flags.get().size()) {
+        void (*V8SetFlagsFromString)(const char * str, int length);
+        V8SetFlagsFromString = (decltype(V8SetFlagsFromString))linker::dlsym(handle, "_ZN2v82V818SetFlagsFromStringEPKc");
+        if(V8SetFlagsFromString) {
+            Log::info("V8", "Applying v8-flags %s", v8Flags.get().data());
+            V8SetFlagsFromString(v8Flags.get().data(), v8Flags.get().size());
+        } else {
+            Log::warn("V8", "Couldn't apply v8-flags %s to the game", v8Flags.get().data());
+        }
+    }
     SymbolsHelper::initSymbols(handle);
     CorePatches::install(handle);
 #ifdef __i386__
@@ -236,6 +308,14 @@ int main(int argc, char* argv[]) {
         linker::dlclose(handle);
     });
     startThread.detach();
+
+    std::unique_ptr<RpcCallbackServer> file_handler;
+    try {
+        FileUtil::mkdirRecursive(defaultDataDir);
+        file_handler = std::make_unique<RpcCallbackServer>(defaultDataDir + "file_handler", support);
+    } catch(const std::exception& ex) {
+        Log::error("Launcher", "Failed to bind file_handler, you may be unable to import files: %s", ex.what());
+    }
 
     Log::info("Launcher", "Executing main thread");
     ThreadMover::executeMainThread();

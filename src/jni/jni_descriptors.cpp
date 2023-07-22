@@ -70,6 +70,9 @@ END_NATIVE_DESCRIPTOR
 BEGIN_NATIVE_DESCRIPTOR(NativeActivity)
 END_NATIVE_DESCRIPTOR
 
+BEGIN_NATIVE_DESCRIPTOR(NetworkMonitor)
+END_NATIVE_DESCRIPTOR
+
 BEGIN_NATIVE_DESCRIPTOR(MainActivity){Constructor<MainActivity>{}},
     {Function<&MainActivity::getAndroidVersion>{}, "getAndroidVersion"},
     {Function<&MainActivity::getScreenHeight>{}, "getScreenHeight"},
@@ -108,7 +111,9 @@ BEGIN_NATIVE_DESCRIPTOR(MainActivity){Constructor<MainActivity>{}},
     {Function<&MainActivity::getImageData>{}, "getImageData"},
     {Function<&MainActivity::tick>{}, "tick"},
     {Function<&MainActivity::getPixelsPerMillimeter>{}, "getPixelsPerMillimeter"},
+    {Function<&MainActivity::getPlatformDpi>{}, "getPlatformDpi"},
     {Function<&MainActivity::startPlayIntegrityCheck>{}, "startPlayIntegrityCheck"},
+    {Function<&MainActivity::requestIntegrityToken>{}, "requestIntegrityToken"},
     {Function<&MainActivity::launchUri>{}, "launchUri"},
     {Function<&MainActivity::share>{}, "share"},
     {Function<&MainActivity::openFile>{}, "openFile"},
