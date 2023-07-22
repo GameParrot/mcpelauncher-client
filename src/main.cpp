@@ -101,6 +101,8 @@ int main(int argc, char* argv[]) {
     argparser::arg<bool> forceEgl(p, "--force-opengles", "-fes", "Force creating an OpenGL ES surface instead of using the glcorepatch hack", !GLCorePatch::mustUseDesktopGL());
     argparser::arg<bool> texturePatch(p, "--texture-patch", "-tp", "Rewrite textures of the game for Minecraft 1.16.210 - 1.17.4X", false);
     argparser::arg<bool> stdinImpt(p, "--stdin-import", "-si", "Use stdin for file import", false);
+    argparser::arg<std::string> alsaDev(p, "--alsi-dev", "-ad", "ALSA device to use if fmod is not used", "default");
+    argparser::arg<int> alsaLat(p, "--alsa-latency", "-al", "ALSA audio latency to use if fmod is not used", 10000);
 
     if(!p.parse(argc, (const char**)argv))
         return 1;
@@ -113,6 +115,8 @@ int main(int argc, char* argv[]) {
     options.windowHeight = windowHeight;
     options.graphicsApi = forceEgl.get() ? GraphicsApi::OPENGL_ES2 : GraphicsApi::OPENGL;
     options.useStdinImport = stdinImpt;
+    options.alsaDev = alsaDev;
+    options.alsaLat = alsaLat;
 
     FakeEGL::enableTexturePatch = texturePatch.get();
 
