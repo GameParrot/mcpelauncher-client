@@ -49,7 +49,11 @@ struct RpcCallbackServer : daemon_utils::auto_shutdown_service {
         add_handler_async("mcpelauncher-client/sendfile", [this, &support](simpleipc::connection& conn, std::string const& method, nlohmann::json const& data, result_handler const& cb) {
             std::vector<std::string> files = data;
             for(auto&& file : files) {
-                support.importFile(file);
+                if (file.rfind("minecraft://", 0) == 0) {
+                    support.sendUri(file);
+                } else {
+                    support.importFile(file);
+                }
             }
             cb(simpleipc::rpc_json_result::response({}));
         });
@@ -89,6 +93,7 @@ int main(int argc, char* argv[]) {
     argparser::arg<std::string> dataDir(p, "--data-dir", "-dd", "Directory to use for the data");
     argparser::arg<std::string> cacheDir(p, "--cache-dir", "-dc", "Directory to use for cache");
     argparser::arg<std::string> importFilePath(p, "--import-file-path", "-ifp", "File to import to the game");
+    argparser::arg<std::string> sendUri(p, "--uri", "-u", "URI to send to the game");
     argparser::arg<std::string> v8Flags(p, "--v8-flags", "-v8f", "Flags to pass to the v8 engine of the game",
 #if defined(__APPLE__) && defined(__aarch64__)
         // Due to problems with running JIT compiled code without using apple specfic workarounds, we just run javascript via jitless
@@ -114,6 +119,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     options.importFilePath = importFilePath;
+    options.sendUri = sendUri;
     options.windowWidth = windowWidth;
     options.windowHeight = windowHeight;
     options.graphicsApi = forceEgl.get() ? GraphicsApi::OPENGL_ES2 : GraphicsApi::OPENGL;
