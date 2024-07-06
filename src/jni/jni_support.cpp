@@ -257,12 +257,10 @@ void JniSupport::startGame(ANativeActivity_createFunc *activityOnCreate,
         std::thread([=]() {
             for (std::string line; std::getline(std::cin, line);) {
                 struct stat buffer;
-                if ((stat (line.c_str(), &buffer) == 0)) {
-                    if (line.rfind("minecraft://", 0) == 0) {
-                        sendUri(line);
-                    } else {
-                        importFile(line);
-                    }
+                if (line.rfind("minecraft://", 0) == 0) {
+                    sendUri(line);
+                } else if ((stat (line.c_str(), &buffer) == 0)) {
+                    importFile(line);
                 }
             }
         }).detach();
