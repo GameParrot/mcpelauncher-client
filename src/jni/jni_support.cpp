@@ -31,6 +31,7 @@
 #include <iostream>
 #include <fstream>
 #include <sys/stat.h>
+#include <regex>
 #if !defined(_GLIBCXX_RELEASE) || _GLIBCXX_RELEASE > 8
 #include <filesystem>
 #endif
@@ -249,17 +250,50 @@ void JniSupport::startGame(ANativeActivity_createFunc *activityOnCreate,
     if (!options.importFilePath.empty()) {
         importFile(options.importFilePath);
     }
+    if (!options.sendUri.empty()) {
+        sendUri(options.sendUri);
+    }
     if (options.useStdinImport) {
         std::thread([=]() {
             for (std::string line; std::getline(std::cin, line);) {
                 struct stat buffer;
                 if ((stat (line.c_str(), &buffer) == 0)) {
-                    importFile(line);
+                    if (line.rfind("minecraft://", 0) == 0) {
+                        sendUri(line);
+                    } else {
+                        importFile(line);
+                    }
                 }
             }
         }).detach();
     }
 
+}
+
+void JniSupport::sendUri(std::string uri) {
+    if (uri.find("minecraft://") != std::string::npos) {
+        FakeJni::LocalFrame frame(vm);
+
+        std::string host = "";
+        std::string query = "";
+
+        std::regex host_regex(R"(minecraft?:\/\/([^\/?#:]+))");
+        std::smatch host_match;
+        if (std::regex_search(uri, host_match, host_regex)) {
+            host = host_match[1].str();
+        }
+
+        std::regex query_regex(R"(\?([^#]+))");
+        std::smatch query_match;
+        if (std::regex_search(uri, query_match, query_regex)) {
+            query = query_match[1].str();
+        }
+
+        auto urlLaunch = activity->getClass().getMethod("(Ljava/lang/String;Ljava/lang/String;)V", "nativeProcessIntentUriQuery");
+        urlLaunch->invoke(frame.getJniEnv(), activity.get(), std::make_shared<FakeJni::JString>(host.c_str()), std::make_shared<FakeJni::JString>(query.c_str())); // The game expects it to be parsed using the java getHost() and getQuery() methods
+    } else {
+        Log::warn("JniSupport", "Not sending URI %s, not a valid Minecraft URI", uri.c_str());
+    }
 }
 
 void JniSupport::importFile(std::string path) {
