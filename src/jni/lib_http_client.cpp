@@ -6,6 +6,17 @@
 
 using namespace std::placeholders;
 
+bool slist_contains(struct curl_slist *list, const char *str) {
+    struct curl_slist *current = list;
+    while (current != nullptr) {
+        if (strcasecmp(current->data, str) == 0) {
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
+
 HttpClientRequest::HttpClientRequest() {
     curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
@@ -113,7 +124,7 @@ void HttpClientRequest::setHttpMethodAndBody2(std::shared_ptr<FakeJni::JString> 
     header = curl_slist_append(header, ("Content-Length: " + std::to_string(contentLength)).c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
     auto conttype = contentType->asStdString();
-    if(conttype.length()) {
+    if(conttype.length() && !slist_contains(header, ("Content-Type: " + conttype).c_str())) {
         header = curl_slist_append(header, ("Content-Type: " + conttype).c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
     }
