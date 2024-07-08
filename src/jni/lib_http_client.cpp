@@ -66,7 +66,7 @@ void HttpClientRequest::setHttpMethodAndBody(std::shared_ptr<FakeJni::JString> m
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, this->body.size());
     }
     auto conttype = contentType->asStdString();
-    if(conttype.length()) {
+    if(conttype.length() && !slist_contains(header, ("Content-Type: " + conttype).c_str())) {
         header = curl_slist_append(header, ("Content-Type: " + conttype).c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
     }
