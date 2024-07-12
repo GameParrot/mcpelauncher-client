@@ -65,7 +65,7 @@ LauncherOptions options;
 
 void printVersionInfo();
 
-bool checkFullscreen();
+void loadGameOptions();
 
 int main(int argc, char* argv[]) {
     if(argc == 2 && argv[1][0] != '-') {
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
 #define ARCH "Unknown"
 #endif
     Log::info("Launcher", "OS: %s, Arch: %s", TARGET, ARCH);
-    options.fullscreen = checkFullscreen();
+    loadGameOptions();
 #if defined(__i386__) || defined(__x86_64__)
     {
         CpuId cpuid;
@@ -510,12 +510,34 @@ void printVersionInfo() {
     printf("MSA daemon path: %s\n", XboxLiveHelper::findMsa().c_str());
 }
 
-bool checkFullscreen() {
+void loadGameOptions() {
     properties::property_list properties(':');
-    properties::property<bool> fullscreen(properties, "gfx_fullscreen", /* default if not defined*/ false);
+    properties::property<int> leftKey(properties, "keyboard_type_0_key.left", 'A');
+    properties::property<int> downKey(properties, "keyboard_type_0_key.back", 'S');
+    properties::property<int> rightKey(properties, "keyboard_type_0_key.right", 'D');
+    properties::property<int> upKey(properties, "keyboard_type_0_key.forward", 'W');
+
+    properties::property<int> leftKeyFullKeyboard(properties, "keyboard_type_1_key.left", 'A');
+    properties::property<int> downKeyFullKeyboard(properties, "keyboard_type_1_key.back", 'S');
+    properties::property<int> rightKeyFullKeyboard(properties, "keyboard_type_1_key.right", 'D');
+    properties::property<int> upKeyFullKeyboard(properties, "keyboard_type_1_key.forward", 'W');
+
+    properties::property<bool> fullKeyboard(properties, "ctrl_fullkeyboardgameplay", false);
+
     std::ifstream propertiesFile(PathHelper::getPrimaryDataDirectory() + "/games/com.mojang/minecraftpe/options.txt");
     if (propertiesFile) {
         properties.load(propertiesFile);
     }
-    return fullscreen;
+
+    GameOptions::leftKey = leftKey;
+    GameOptions::downKey = downKey;
+    GameOptions::rightKey = rightKey;
+    GameOptions::upKey = upKey;
+
+    GameOptions::leftKeyFullKeyboard = leftKeyFullKeyboard;
+    GameOptions::downKeyFullKeyboard = downKeyFullKeyboard;
+    GameOptions::rightKeyFullKeyboard = rightKeyFullKeyboard;
+    GameOptions::upKeyFullKeyboard = upKeyFullKeyboard;
+
+    GameOptions::fullKeyboard = fullKeyboard;
 }

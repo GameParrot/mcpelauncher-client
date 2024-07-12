@@ -8,9 +8,6 @@
 #include <cstdlib>
 #include <string>
 #include "settings.h"
-#ifdef USE_IMGUI
-#include <imgui.h>
-#endif
 
 static bool ReadEnvFlag(const char* name, bool def = false) {
     auto val = getenv(name);
@@ -33,7 +30,7 @@ static int ReadEnvInt(const char* name, int def = 0) {
 WindowCallbacks::WindowCallbacks(GameWindow& window, JniSupport& jniSupport, FakeInputQueue& inputQueue) : window(window), jniSupport(jniSupport), inputQueue(inputQueue) {
     useDirectMouseInput = Mouse::feed;
     useDirectKeyboardInput = (Keyboard::_states && (Keyboard::_inputs || Keyboard::_inputsLegacy) && Keyboard::_gameControllerId);
-    if (fullscreen) {
+    if (Settings::fullscreen) {
         window.setFullscreen(true);
     }
     useRawInput = ReadEnvFlag("MCPELAUNCHER_CLIENT_RAW_INPUT");
@@ -85,9 +82,10 @@ void WindowCallbacks::onClose() {
 }
 
 void WindowCallbacks::setFullscreen(bool isFs) {
-    if(fullscreen != isFs) {
+    if(Settings::fullscreen != isFs) {
         window.setFullscreen(isFs);
-        fullscreen = isFs;
+        Settings::fullscreen = isFs;
+        Settings::save();
     }
 }
 
@@ -247,7 +245,7 @@ static bool deadKey(KeyCode key) {
 }
 
 #ifdef USE_IMGUI
-static ImGuiKey mapImGuiKey(KeyCode code) {
+ImGuiKey WindowCallbacks::mapImGuiKey(KeyCode code) {
     if(code >= KeyCode::NUM_0 && code <= KeyCode::NUM_9)
         return (ImGuiKey)((int)code - (int)KeyCode::NUM_0 + ImGuiKey_0);
     if(code >= KeyCode::NUMPAD_0 && code <= KeyCode::NUMPAD_9)
@@ -392,7 +390,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
         }
 
         if(key == KeyCode::FN11 && action == KeyAction::PRESS)
-            setFullscreen(!fullscreen);
+            setFullscreen(!Settings::fullscreen);
 
         if(useDirectKeyboardInput && (action == KeyAction::PRESS || action == KeyAction::RELEASE)) {
             if (Keyboard::useLegacyKeyboard) {

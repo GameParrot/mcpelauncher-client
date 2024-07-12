@@ -6,7 +6,9 @@
 #include "fake_inputqueue.h"
 #include <chrono>
 #include "main.h"
-
+#ifdef USE_IMGUI
+#include <imgui.h>
+#endif
 class WindowCallbacks {
 private:
     struct GamepadData {
@@ -27,7 +29,6 @@ private:
     bool useDirectMouseInput, useDirectKeyboardInput;
     bool modCTRL = false;
     bool needsQueueGamepadInput = true;
-    bool fullscreen = options.fullscreen;
     bool sendEvents = false;
     int menubarsize = 0;
     enum class InputMode {
@@ -79,4 +80,7 @@ public:
     static int mapMouseButtonToAndroid(int btn);
     static int mapMinecraftToAndroidKey(KeyCode code);
     static int mapGamepadToAndroidKey(GamepadButtonId btn);
+#ifdef USE_IMGUI
+    static ImGuiKey mapImGuiKey(KeyCode code);
+#endif
 };

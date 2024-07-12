@@ -13,8 +13,21 @@ bool Settings::enable_menubar = true;
 int Settings::fps_hud_location;
 int Settings::keystroke_mouse_hud_location;
 std::string Settings::videoMode;
-int Settings::scale;
+float Settings::scale;
 std::string Settings::menubarFocusKey;
+bool Settings::fullscreen;
+
+char GameOptions::leftKey = 'A';
+char GameOptions::downKey = 'S';
+char GameOptions::rightKey = 'D';
+char GameOptions::upKey = 'W';
+
+char GameOptions::leftKeyFullKeyboard = 'A';
+char GameOptions::downKeyFullKeyboard = 'S';
+char GameOptions::rightKeyFullKeyboard = 'D';
+char GameOptions::upKeyFullKeyboard = 'W';
+
+bool GameOptions::fullKeyboard = false;
 
 static properties::property_list settings('=');
 static properties::property<std::string> enable_imgui(settings, "enable_imgui", "auto");
@@ -24,8 +37,9 @@ static properties::property<bool> enable_menubar(settings, "enable_menubar", /* 
 static properties::property<int> fps_hud_location(settings, "fps_hud_location", /* default if not defined*/ -1);
 static properties::property<int> keystroke_mouse_hud_location(settings, "keystroke_mouse_hud_location", /* default if not defined*/ -1);
 static properties::property<std::string> videoMode(settings, "videoMode", "");
-static properties::property<int> scale(settings, "scale", 1);
+static properties::property<float> scale(settings, "scale", 1);
 static properties::property<std::string> menubarFocusKey(settings, "menubarFocusKey", "");
+static properties::property<bool> fullscreen(settings, "fullscreen", /* default if not defined*/ false);
 
 std::string Settings::getPath() {
     return PathHelper::getPrimaryDataDirectory() + "mcpelauncher-client-settings.txt";
@@ -50,6 +64,7 @@ void Settings::load() {
     Settings::videoMode = ::videoMode.get();
     Settings::scale = ::scale.get();
     Settings::menubarFocusKey = ::menubarFocusKey.get();
+    Settings::fullscreen = ::fullscreen.get();
 }
 
 void Settings::save() {
@@ -67,6 +82,7 @@ void Settings::save() {
     ::scale.set(Settings::scale);
     ::menubarFocusKey.set(Settings::menubarFocusKey);
     std::ofstream propertiesFile(getPath());
+    ::fullscreen.set(Settings::fullscreen);
     if (propertiesFile) {
         settings.save(propertiesFile);
     }

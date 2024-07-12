@@ -12,10 +12,26 @@ struct Settings {
     static int fps_hud_location;
     static int keystroke_mouse_hud_location;
     static std::string videoMode;
-    static int scale;
+    static float scale;
     static std::string menubarFocusKey;
+
+    static bool fullscreen;
 
     static std::string getPath();
     static void load();
     static void save();
+};
+
+struct GameOptions {
+    static char leftKey;
+    static char downKey;
+    static char rightKey;
+    static char upKey;
+
+    static char leftKeyFullKeyboard;
+    static char downKeyFullKeyboard;
+    static char rightKeyFullKeyboard;
+    static char upKeyFullKeyboard;
+
+    static bool fullKeyboard;
 };

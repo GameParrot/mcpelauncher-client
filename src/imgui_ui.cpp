@@ -16,6 +16,8 @@
 #include <log.h>
 #include <util.h>
 #include <chrono>
+#include <sstream>
+#include "window_callbacks.h"
 
 static double g_Time = 0.0;
 static bool allowGPU = true;
@@ -60,14 +62,14 @@ static void ReloadFont() {
     void* data = ImFileLoadToMemory(path.data(), "rb", &data_size, 0);
 
     io.Fonts->Clear();
-    fontDefaultSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, 15 * Settings::scale, &fontConfig);
+    fontDefaultSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)ceil(15 * Settings::scale), &fontConfig);
     io.FontDefault = fontDefaultSize;
 
-    fontMediumSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)(18 * (1 + (Settings::scale - 1) * 0.5f)), &fontConfig);
+    fontMediumSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)ceil(18 * Settings::scale), &fontConfig);
 
-    fontLargeSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)(24 * (1 + (Settings::scale - 1) * 0.6f)), &fontConfig);
+    fontLargeSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)ceil(24 * Settings::scale), &fontConfig);
 
-    fontVeryLargeSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)(36 * (1 + (Settings::scale - 1) * 1.0f)), &fontConfig);
+    fontVeryLargeSize = io.Fonts->AddFontFromMemoryTTF(data, data_size, (int)ceil(36 * Settings::scale), &fontConfig);
 
     IM_FREE(data);
 
@@ -146,7 +148,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         return;
     }
     bool reloadFont = false;
-    int oldScale = Settings::scale;
+    float oldScale = Settings::scale;
     ImGuiIO& io = ImGui::GetIO();
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -289,9 +291,11 @@ void ImGuiUIDrawFrame(GameWindow* window) {
                 ImGui::EndMenu();
             }
             if(ImGui::BeginMenu("Scale")) {
-                for(int i = 1; i < 10; i++) {
-                    if (ImGui::MenuItem((std::to_string(i) + "x").data(), nullptr, Settings::scale == i)) {
-                        Settings::scale = i;
+                for(int i = 1; i <= 16; i++) {
+                    std::stringstream ss;
+                    ss << i/4.;
+                    if (ImGui::MenuItem((ss.str() + "x").data(), nullptr, Settings::scale == i / 4.)) {
+                        Settings::scale = i / 4.;
                         Settings::save();
                         reloadFont = true;
                     }
@@ -303,7 +307,9 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         if(ImGui::BeginMenu("Video")) {
             auto modes = window->getFullscreenModes();
             if(ImGui::MenuItem("Toggle Fullscreen", nullptr, window->getFullscreen())) {
-                window->setFullscreen(!window->getFullscreen());
+                window->setFullscreen(!Settings::fullscreen);
+                Settings::fullscreen = !Settings::fullscreen;
+                Settings::save();
             }
             if(!modes.empty()) {
                 ImGui::Separator();
@@ -433,7 +439,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         ImGui::End();
     }
     if(Settings::keystroke_mouse_hud_location >= 0) {
-        const float SMALL_PAD = 5.0f;
+        const float SMALL_PAD = 5.0f * Settings::scale;
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoMouseInputs;
         
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -452,7 +458,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         ImGui::PopStyleVar(2);
 
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1, 1, 1, 1));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15.0f, 5.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15.0f * Settings::scale, 5.0f * Settings::scale));
 
         ImGui::PushFont(fontVeryLargeSize);
 
@@ -465,12 +471,12 @@ void ImGuiUIDrawFrame(GameWindow* window) {
 
         ImGui::SetCursorPos(adj(ImVec2(SMALL_PAD + keySize.x, work_pos.y)));
         window_flags |= ImGuiWindowFlags_NoMove;
-        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(ImGuiKey_W)->Down ? 0.70f : 0.15f); // Transparent background
+        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(WindowCallbacks::mapImGuiKey((KeyCode)(GameOptions::fullKeyboard ? GameOptions::upKeyFullKeyboard : GameOptions::upKey)))->Down ? 0.70f : 0.2f); // Transparent background
         ImVec2 size;
         
         if (ImGui::BeginChild("W", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, window_flags & ~ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("W");
+            ImGui::Text("%c",(GameOptions::fullKeyboard ? GameOptions::upKeyFullKeyboard : GameOptions::upKey));
             size = ImGui::GetWindowSize();
         }
         ImGui::EndChild();
@@ -479,10 +485,10 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         auto y = work_pos.y + size.y + SMALL_PAD;
         ImGui::SetCursorPos(adj(ImVec2(x, y)));
         window_flags |= ImGuiWindowFlags_NoMove;
-        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(ImGuiKey_A)->Down ? 0.70f : 0.15f); // Transparent background
+        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(WindowCallbacks::mapImGuiKey((KeyCode)(GameOptions::fullKeyboard ? GameOptions::leftKeyFullKeyboard : GameOptions::leftKey)))->Down ? 0.70f : 0.2f); // Transparent background
         if (ImGui::BeginChild("A", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, window_flags & ~ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("A");
+            ImGui::Text("%c",(GameOptions::fullKeyboard ? GameOptions::leftKeyFullKeyboard : GameOptions::leftKey));
             auto pos = ImGui::GetWindowPos();
             size = ImGui::GetWindowSize();
             x += SMALL_PAD + size.x;
@@ -491,10 +497,10 @@ void ImGuiUIDrawFrame(GameWindow* window) {
 
         ImGui::SetCursorPos(adj(ImVec2(x, y)));
         window_flags |= ImGuiWindowFlags_NoMove;
-        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(ImGuiKey_S)->Down ? 0.70f : 0.15f); // Transparent background
+        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(WindowCallbacks::mapImGuiKey((KeyCode)(GameOptions::fullKeyboard ? GameOptions::downKeyFullKeyboard : GameOptions::downKey)))->Down ? 0.70f : 0.2f); // Transparent background
         if (ImGui::BeginChild("S", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, window_flags & ~ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("S");
+            ImGui::Text("%c",(GameOptions::fullKeyboard ? GameOptions::downKeyFullKeyboard : GameOptions::downKey));
             auto pos = ImGui::GetWindowPos();
             auto size = ImGui::GetWindowSize();
             x += SMALL_PAD + size.x;
@@ -505,10 +511,10 @@ void ImGuiUIDrawFrame(GameWindow* window) {
 
         ImGui::SetCursorPos(adj(ImVec2(x, y)));
         window_flags |= ImGuiWindowFlags_NoMove;
-        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(ImGuiKey_D)->Down ? 0.70f : 0.15f); // Transparent background
+        ImGui::SetNextWindowBgAlpha(ImGui::GetKeyData(WindowCallbacks::mapImGuiKey((KeyCode)(GameOptions::fullKeyboard ? GameOptions::rightKeyFullKeyboard : GameOptions::rightKey)))->Down ? 0.70f : 0.2f); // Transparent background
         if (ImGui::BeginChild("D", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, window_flags & ~ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("D");
+            ImGui::Text("%c",(GameOptions::fullKeyboard ? GameOptions::rightKeyFullKeyboard : GameOptions::rightKey));
             auto pos = ImGui::GetWindowPos();
             auto size = ImGui::GetWindowSize();
             finalSize = ImVec2(x + size.x - SMALL_PAD, size.y);
@@ -597,7 +603,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         if (ImGui::BeginChild("LMB", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, window_flags & ~ImGuiWindowFlags_AlwaysAutoResize))
         {
             auto pos = ImGui::GetWindowPos();
-            CenterText(cpsSize.x, 5, "LMB");
+            CenterText(cpsSize.x, 5 * Settings::scale, "LMB");
             ImGui::Dummy(ImVec2(cpsSize.x, ImGui::GetFontSize()));
             ImGui::PushFont(fontMediumSize);
             CenterText(cpsSize.x, (int)ImGui::GetFontSize()+(ImGui::GetFontSize()/2), std::to_string(lmb.size()) + " CPS");
@@ -614,7 +620,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         if (ImGui::BeginChild("RMB", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, window_flags & ~ImGuiWindowFlags_AlwaysAutoResize))
         {
             auto pos = ImGui::GetWindowPos();
-            CenterText(cpsSize.x, 5, "RMB");
+            CenterText(cpsSize.x, 5 * Settings::scale, "RMB");
             ImGui::Dummy(ImVec2(cpsSize.x, ImGui::GetFontSize()));
             ImGui::PushFont(fontMediumSize);
             CenterText(cpsSize.x, (int)ImGui::GetFontSize()+(ImGui::GetFontSize()/2), std::to_string(rmb.size()) + " CPS");
