@@ -457,7 +457,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         ImGui::Begin("hud", nullptr, window_flags);
         ImGui::PopStyleVar(2);
 
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(1, 1, 1, 1));
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.7, 0.7, 0.7, 1));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15.0f * Settings::scale, 5.0f * Settings::scale));
 
         ImGui::PushFont(fontVeryLargeSize);
