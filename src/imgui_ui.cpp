@@ -124,15 +124,6 @@ void ImGuiUIInit(GameWindow* window) {
             window->setFullscreenMode(mode);
         }
     }
-
-    // auto && style = ImGui::GetStyle();
-    // style.Colors[ImGuiCol_Border]                = ImVec4(0.31f, 0.31f, 1.00f, 0.00f);
-    // style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    // style.Colors[ImGuiCol_Button] = ImVec4(0x1e / 255.0, 0x1e / 255.0, 0x1e / 255.0, 0xff);
-    // //style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0x1e / 255.0, 0x1e / 255.0, 0x1e / 255.0, 0xff);
-    // style.Colors[ImGuiCol_ButtonActive] = ImVec4(0x30 / 255.0, 0x30 / 255.0, 0x30 / 255.0, 0xff);
-
-    ImGui::GetStyle().ScaleAllSizes(Settings::scale);
 }
 
 static void CenterText(int x, int yPos, std::string text) {
@@ -148,7 +139,6 @@ void ImGuiUIDrawFrame(GameWindow* window) {
         return;
     }
     bool reloadFont = false;
-    float oldScale = Settings::scale;
     ImGuiIO& io = ImGui::GetIO();
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -290,11 +280,11 @@ void ImGuiUIDrawFrame(GameWindow* window) {
                 }
                 ImGui::EndMenu();
             }
-            if(ImGui::BeginMenu("Scale")) {
-                for(int i = 1; i <= 16; i++) {
+            if(ImGui::BeginMenu("UI Scale")) {
+                for(int i = 4; i <= 20; i++) {
                     std::stringstream ss;
-                    ss << i/4.;
-                    if (ImGui::MenuItem((ss.str() + "x").data(), nullptr, Settings::scale == i / 4.)) {
+                    ss << 25*i;
+                    if (ImGui::MenuItem((ss.str() + "%").data(), nullptr, Settings::scale == i / 4.)) {
                         Settings::scale = i / 4.;
                         Settings::save();
                         reloadFont = true;
@@ -645,6 +635,5 @@ void ImGuiUIDrawFrame(GameWindow* window) {
 
     if(reloadFont) {
         ReloadFont();
-        ImGui::GetStyle().ScaleAllSizes((float)Settings::scale / oldScale);
     }
 }
