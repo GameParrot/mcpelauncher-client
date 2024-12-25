@@ -123,7 +123,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
         if(btn < 1)
             return;
 #ifdef USE_IMGUI
-        if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
+        if(ImGui::GetCurrentContext()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMouseButtonEvent(btn - 1, action != MouseButtonAction::RELEASE);
@@ -135,7 +135,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
                     window.stopTextInput();
                 }
             }
-            if(io.WantCaptureMouse) {
+            if(io.WantCaptureMouse && !window.getCursorDisabled()) {
                 return;
             }
         }
@@ -403,7 +403,7 @@ static ImGuiKey mapImGuiModKey(KeyCode code) {
 void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
     if(hasInputMode(InputMode::Mouse)) {
 #ifdef USE_IMGUI
-        if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
+        if(ImGui::GetCurrentContext()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddKeyEvent(mapImGuiModKey(key), action != KeyAction::RELEASE);
             io.AddKeyEvent(mapImGuiKey(key), action != KeyAction::RELEASE);
@@ -415,7 +415,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
                     window.stopTextInput();
                 }
             }
-            if(io.WantCaptureKeyboard || io.WantTextInput) {
+            if((io.WantCaptureKeyboard || io.WantTextInput) && !window.getCursorDisabled()) {
                 return;
             }
         }
