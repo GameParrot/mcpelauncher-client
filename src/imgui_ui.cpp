@@ -848,6 +848,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
             if(activeWindows[i]->isModal ? ImGui::BeginPopupModal(activeWindows[i]->title.data(), &activeWindows[i]->open) : ImGui::Begin(activeWindows[i]->title.data(), &activeWindows[i]->open)) {
                 
                 for(auto&& control : activeWindows[i]->controls) {
+                    activeWindowsLock.unlock();
                     switch (control.type)
                     {
                     case 0:
@@ -911,6 +912,7 @@ void ImGuiUIDrawFrame(GameWindow* window) {
                     default:
                         break;
                     }
+                    activeWindowsLock.try_lock();
                 }
                 if(activeWindows[i]->isModal) {
                     ImGui::EndPopup();
