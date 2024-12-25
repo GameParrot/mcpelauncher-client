@@ -123,7 +123,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
         if(btn < 1)
             return;
 #ifdef USE_IMGUI
-        if(ImGui::GetCurrentContext()) {
+        if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMouseButtonEvent(btn - 1, action != MouseButtonAction::RELEASE);
@@ -158,7 +158,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
 void WindowCallbacks::onMousePosition(double x, double y) {
     if(hasInputMode(InputMode::Mouse)) {
 #ifdef USE_IMGUI
-            if(ImGui::GetCurrentContext()) {
+            if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(x, y);
@@ -184,7 +184,7 @@ void WindowCallbacks::onMouseRelativePosition(double x, double y) {
 void WindowCallbacks::onMouseScroll(double x, double y, double dx, double dy) {
     if(hasInputMode(InputMode::Mouse)) {
 #ifdef USE_IMGUI
-        if(ImGui::GetCurrentContext()) {
+        if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMouseWheelEvent(dx, dy);
@@ -403,7 +403,7 @@ static ImGuiKey mapImGuiModKey(KeyCode code) {
 void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
     if(hasInputMode(InputMode::Mouse)) {
 #ifdef USE_IMGUI
-        if(ImGui::GetCurrentContext()) {
+        if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddKeyEvent(mapImGuiModKey(key), action != KeyAction::RELEASE);
             io.AddKeyEvent(mapImGuiKey(key), action != KeyAction::RELEASE);
@@ -525,7 +525,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
 }
 void WindowCallbacks::onKeyboardText(std::string const& c) {
 #ifdef USE_IMGUI
-    if(ImGui::GetCurrentContext()) {
+    if(ImGui::GetCurrentContext() && !window.getCursorDisabled()) {
         ImGuiIO& io = ImGui::GetIO();
         io.AddInputCharactersUTF8(c.data());
         if(io.WantCaptureKeyboard) {
