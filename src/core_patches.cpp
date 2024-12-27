@@ -5,6 +5,7 @@
 #include <log.h>
 
 CorePatches::GameWindowHandle CorePatches::currentGameWindowHandle;
+std::vector<std::function<void()>> CorePatches::onWindowCreatedCallbacks;
 
 void CorePatches::install(void* handle) {
     // void* ptr = linker::dlsym(handle, "_ZN3web4http6client7details35verify_cert_chain_platform_specificERN5boost4asio3ssl14verify_contextERKSs");
@@ -41,6 +42,9 @@ void CorePatches::setGameWindow(std::shared_ptr<GameWindow> gameWindow) {
 
 void CorePatches::setGameWindowCallbacks(std::shared_ptr<WindowCallbacks> gameWindowCallbacks) {
     currentGameWindowHandle.callbacks = gameWindowCallbacks;
+    for(size_t i = 0; i < onWindowCreatedCallbacks.size(); i++) {
+        onWindowCreatedCallbacks[i]();
+    }
 }
 
 void CorePatches::loadGameWindowLibrary() {
@@ -76,6 +80,10 @@ void CorePatches::loadGameWindowLibrary() {
 
     syms["gamewindow_addmousescrollhook"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*hook)(void* user, double x, double y, double dx, double dy)) {
         handle->callbacks->addMouseScrollHook(user, hook);
+    };
+
+    syms["gamewindow_addwindowcreationcallback"] = (void*)+[](void* user, void (*onCreated)(void* user)) {
+        onWindowCreatedCallbacks.emplace_back(std::bind(onCreated, user));
     };
 
     linker::load_library("libmcpelauncher_gamewindow.so", syms);

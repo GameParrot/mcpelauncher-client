@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <game_window.h>
 #include "window_callbacks.h"
 
@@ -13,6 +14,8 @@ private:
     };
 
     static GameWindowHandle currentGameWindowHandle;
+
+    static std::vector<std::function<void()>> onWindowCreatedCallbacks;
 
 public:
     static void
