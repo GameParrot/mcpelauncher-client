@@ -5,6 +5,8 @@
 #include "jni/jni_support.h"
 #include "fake_inputqueue.h"
 #include <chrono>
+#include <vector>
+#include <mutex>
 #include "main.h"
 #ifdef USE_IMGUI
 #include <imgui.h>
@@ -17,6 +19,31 @@ private:
 
         GamepadData();
     };
+    struct KeyboardInputHook {
+        void *user;
+        bool (*hook)(void *user, int keyCode, int action);
+    };
+    struct MouseClickHook {
+        void *user;
+        bool (*hook)(void *user, double x, double y, int button, int action);
+    };
+    struct MousePositionHook {
+        void *user;
+        bool (*hook)(void *user, double x, double y, bool relative);
+    };
+    struct MouseScrollHook {
+        void *user;
+        bool (*hook)(void *user, double x, double y, double dx, double dy);
+    };
+
+    std::vector<KeyboardInputHook> keyboardHooks;
+    std::vector<MouseClickHook> mouseClickHooks;
+    std::vector<MousePositionHook> mousePositionHooks;
+    std::vector<MouseScrollHook> mouseScrollHooks;
+    std::mutex keyboardHooksLock;
+    std::mutex mouseClickHooksLock;
+    std::mutex mousePositionHooksLock;
+    std::mutex mouseScrollHooksLock;
 
     GameWindow &window;
     JniSupport &jniSupport;
@@ -30,6 +57,7 @@ private:
     bool modCTRL = false;
     bool needsQueueGamepadInput = true;
     bool sendEvents = false;
+    bool cursorLocked = false;
     bool imguiTextInput = false;
     int menubarsize = 0;
     enum class InputMode {
@@ -42,7 +70,6 @@ private:
     bool useRawInput = false;
     InputMode forcedMode = InputMode::Unknown;
     int inputModeSwitchDelay = 100;
-    InputMode inputMode = InputMode::Unknown;
     std::chrono::high_resolution_clock::time_point lastUpdated;
     bool hasInputMode(InputMode want = InputMode::Unknown, bool changeMode = true);
 
@@ -60,6 +87,8 @@ public:
     void markRequeueGamepadInput() { needsQueueGamepadInput = true; }
 
     void onWindowSizeCallback(int w, int h);
+
+    void setCursorLocked(bool locked);
 
     void onClose();
 
@@ -79,9 +108,16 @@ public:
     void onGamepadButton(int gamepad, GamepadButtonId btn, bool pressed);
     void onGamepadAxis(int gamepad, GamepadAxisId ax, float value);
 
+    void addKeyboardHook(void *user, bool (*hook)(void *user, int keyCode, int action));
+    void addMouseClickHook(void *user, bool (*hook)(void *user, double x, double y, int button, int action));
+    void addMousePositionHook(void *user, bool (*hook)(void *user, double x, double y, bool relative));
+    void addMouseScrollHook(void *user, bool (*hook)(void *user, double x, double y, double dx, double dy));
+
     static int mapMouseButtonToAndroid(int btn);
     static int mapMinecraftToAndroidKey(KeyCode code);
     static int mapGamepadToAndroidKey(GamepadButtonId btn);
+
+    InputMode inputMode = InputMode::Unknown;
 #ifdef USE_IMGUI
     static ImGuiKey mapImGuiKey(KeyCode code);
 #endif

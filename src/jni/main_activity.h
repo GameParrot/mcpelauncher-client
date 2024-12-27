@@ -81,11 +81,11 @@ public:
     DEFINE_CLASS_NAME("com/mojang/minecraftpe/HardwareInformation")
 
     static std::shared_ptr<FakeJni::JString> getAndroidVersion() {
-        #ifdef __APPLE__
+#ifdef __APPLE__
         return std::make_shared<FakeJni::JString>("macOS");
-        #else
+#else
         return std::make_shared<FakeJni::JString>("Linux");
-        #endif
+#endif
     }
 
     std::shared_ptr<FakeJni::JString> getInstallerPackageName() {
@@ -152,11 +152,11 @@ public:
     }
 
     std::shared_ptr<FakeJni::JString> getDeviceModel() {
-        #ifdef __APPLE__
+#ifdef __APPLE__
         return std::make_shared<FakeJni::JString>("macOS");
-        #else
+#else
         return std::make_shared<FakeJni::JString>("Linux");
-        #endif
+#endif
     }
 
     std::shared_ptr<File> getFilesDir() override {
@@ -203,7 +203,6 @@ public:
         auto method = getClass().getMethod("(J)V", "nativeRunNativeCallbackOnUiThread");
         FakeJni::LocalFrame frame;
         method->invoke(frame.getJniEnv(), this, h);
-
     }
 
     void requestIntegrityToken(std::shared_ptr<FakeJni::JString>);
@@ -262,13 +261,9 @@ public:
 
     FakeJni::JInt getCaretPosition();
 
-    void lockCursor() {
-        window->setCursorDisabled(true);
-    }
+    void lockCursor();
 
-    void unlockCursor() {
-        window->setCursorDisabled(false);
-    }
+    void unlockCursor();
 
     FakeJni::JLong getUsedMemory();
 

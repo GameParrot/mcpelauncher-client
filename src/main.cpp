@@ -371,6 +371,8 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     for(auto s = android_symbols; *s; s++)  // stub missing symbols
         android_syms.insert({*s, (void*)+[]() { Log::warn("Main", "Android stub called"); }});
     linker::load_library("libandroid.so", android_syms);
+    CorePatches::loadGameWindowLibrary();
+
 
     linker::load_library("libmcpelauncher_menu.so", {
         { "mcpelauncher_addmenu", (void*)mcpelauncher_addmenu },

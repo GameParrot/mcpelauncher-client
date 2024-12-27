@@ -30,7 +30,7 @@ static int ReadEnvInt(const char* name, int def = 0) {
 WindowCallbacks::WindowCallbacks(GameWindow& window, JniSupport& jniSupport, FakeInputQueue& inputQueue) : window(window), jniSupport(jniSupport), inputQueue(inputQueue) {
     useDirectMouseInput = Mouse::feed;
     useDirectKeyboardInput = (Keyboard::_states && (Keyboard::_inputs || Keyboard::_inputsLegacy) && Keyboard::_gameControllerId);
-    if (Settings::fullscreen) {
+    if(Settings::fullscreen) {
         window.setFullscreen(true);
     }
     useRawInput = ReadEnvFlag("MCPELAUNCHER_CLIENT_RAW_INPUT");
@@ -61,7 +61,7 @@ void WindowCallbacks::registerCallbacks() {
 void WindowCallbacks::startSendEvents() {
     if(!sendEvents) {
         sendEvents = true;
-        for(auto && gp : gamepads) {
+        for(auto&& gp : gamepads) {
             jniSupport.setGameControllerConnected(gp.first, true);
         }
     }
@@ -75,6 +75,12 @@ void WindowCallbacks::startSendEvents() {
 
 void WindowCallbacks::onWindowSizeCallback(int w, int h) {
     jniSupport.onWindowResized(w, h - Settings::menubarsize);
+}
+
+void WindowCallbacks::setCursorLocked(bool locked) {
+    cursorLocked = locked;
+    if(hasInputMode(InputMode::Mouse, false))
+        window.setCursorDisabled(locked);
 }
 
 void WindowCallbacks::onClose() {
@@ -120,6 +126,15 @@ bool WindowCallbacks::hasInputMode(WindowCallbacks::InputMode want, bool changeM
 
 void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonAction action) {
     if(hasInputMode(InputMode::Mouse)) {
+        if(mouseClickHooksLock.try_lock()) {
+            for(size_t i = 0; i < mouseClickHooks.size(); i++) {
+                if(mouseClickHooks[i].hook(mouseClickHooks[i].user, x, y, (int)btn, (int)action)) {
+                    mouseClickHooksLock.unlock();
+                    return;
+                }
+            }
+            mouseClickHooksLock.unlock();
+        }
         if(btn < 1)
             return;
 #ifdef USE_IMGUI
@@ -147,7 +162,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
         if(useDirectMouseInput)
             Mouse::feed((char)btn, (char)(action == MouseButtonAction::PRESS ? 1 : 0), (short)x, (short)y, 0, 0);
         else if(action == MouseButtonAction::PRESS) {
-            buttonState|=mapMouseButtonToAndroid(btn);
+            buttonState |= mapMouseButtonToAndroid(btn);
             inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_BUTTON_PRESS, 0, x, y - Settings::menubarsize, buttonState, 0));
         } else if(action == MouseButtonAction::RELEASE) {
             buttonState = buttonState & ~mapMouseButtonToAndroid(btn);
@@ -157,8 +172,17 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
 }
 void WindowCallbacks::onMousePosition(double x, double y) {
     if(hasInputMode(InputMode::Mouse)) {
+        if(mousePositionHooksLock.try_lock()) {
+            for(size_t i = 0; i < mousePositionHooks.size(); i++) {
+                if(mousePositionHooks[i].hook(mousePositionHooks[i].user, x, y, false)) {
+                    mousePositionHooksLock.unlock();
+                    return;
+                }
+            }
+            mousePositionHooksLock.unlock();
+        }
 #ifdef USE_IMGUI
-            if(ImGui::GetCurrentContext()) {
+        if(ImGui::GetCurrentContext()) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(x, y);
@@ -175,6 +199,15 @@ void WindowCallbacks::onMousePosition(double x, double y) {
 }
 void WindowCallbacks::onMouseRelativePosition(double x, double y) {
     if(hasInputMode(InputMode::Mouse, std::abs(x) > 10 || std::abs(y) > 10)) {
+        if(mousePositionHooksLock.try_lock()) {
+            for(size_t i = 0; i < mousePositionHooks.size(); i++) {
+                if(mousePositionHooks[i].hook(mousePositionHooks[i].user, x, y, true)) {
+                    mousePositionHooksLock.unlock();
+                    return;
+                }
+            }
+            mousePositionHooksLock.unlock();
+        }
         if(useDirectMouseInput)
             Mouse::feed(0, 0, 0, 0, (short)x, (short)y);
         else
@@ -183,6 +216,15 @@ void WindowCallbacks::onMouseRelativePosition(double x, double y) {
 }
 void WindowCallbacks::onMouseScroll(double x, double y, double dx, double dy) {
     if(hasInputMode(InputMode::Mouse)) {
+        if(mouseScrollHooksLock.try_lock()) {
+            for(size_t i = 0; i < mouseScrollHooks.size(); i++) {
+                if(mouseScrollHooks[i].hook(mouseScrollHooks[i].user, x, y, dx, dy)) {
+                    mouseScrollHooksLock.unlock();
+                    return;
+                }
+            }
+            mouseScrollHooksLock.unlock();
+        }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext()) {
             ImGuiIO& io = ImGui::GetIO();
@@ -250,8 +292,7 @@ void WindowCallbacks::onTouchEnd(int id, double x, double y) {
     }
 }
 static bool deadKey(KeyCode key) {
-    switch (WindowCallbacks::mapMinecraftToAndroidKey(key))
-    {
+    switch(WindowCallbacks::mapMinecraftToAndroidKey(key)) {
     case AKEYCODE_DEL:
     case AKEYCODE_FORWARD_DEL:
     case AKEYCODE_SHIFT_LEFT:
@@ -402,6 +443,15 @@ static ImGuiKey mapImGuiModKey(KeyCode code) {
 
 void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
     if(hasInputMode(InputMode::Mouse)) {
+        if(keyboardHooksLock.try_lock()) {
+            for(size_t i = 0; i < keyboardHooks.size(); i++) {
+                if(keyboardHooks[i].hook(keyboardHooks[i].user, (int)key, (int)action)) {
+                    keyboardHooksLock.unlock();
+                    return;
+                }
+            }
+            keyboardHooksLock.unlock();
+        }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext()) {
             ImGuiIO& io = ImGui::GetIO();
@@ -439,7 +489,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
             setFullscreen(!Settings::fullscreen);
 
         if(useDirectKeyboardInput && (action == KeyAction::PRESS || action == KeyAction::RELEASE)) {
-            if (Keyboard::useLegacyKeyboard) {
+            if(Keyboard::useLegacyKeyboard) {
                 Keyboard::LegacyInputEvent evData{};
                 evData.key = (unsigned int)key & 0xff;
                 evData.event = (action == KeyAction::PRESS ? 1 : 0);
@@ -461,8 +511,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
         }
 
         int32_t state = 0;
-        switch (key)
-        {
+        switch(key) {
         case KeyCode::LEFT_SHIFT:
             state |= AMETA_SHIFT_LEFT_ON | AMETA_SHIFT_ON;
             break;
@@ -482,7 +531,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
             state |= AMETA_CTRL_RIGHT_ON | AMETA_CTRL_ON;
             break;
         case KeyCode::LEFT_SUPER:
-            state |= AMETA_META_LEFT_ON| AMETA_META_ON;
+            state |= AMETA_META_LEFT_ON | AMETA_META_ON;
             break;
         case KeyCode::RIGHT_SUPER:
             state |= AMETA_META_RIGHT_ON | AMETA_META_ON;
@@ -501,7 +550,7 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
 
         if(Settings::enable_keyboard_tab_patches_1_20_60 && state == 0) {
             if(jniSupport.getTextInputHandler().isEnabled() && !jniSupport.getTextInputHandler().isMultiline()) {
-                if(action == KeyAction::PRESS && (lastKey == KeyCode::TAB || lastKey == KeyCode::UP || lastKey == KeyCode::DOWN) && !(key == KeyCode::TAB || key == KeyCode::UP || key == KeyCode::DOWN || key == KeyCode::ENTER|| key == KeyCode::ESCAPE) && lastEnabledNo == jniSupport.getTextInputHandler().getEnabledNo()) {
+                if(action == KeyAction::PRESS && (lastKey == KeyCode::TAB || lastKey == KeyCode::UP || lastKey == KeyCode::DOWN) && !(key == KeyCode::TAB || key == KeyCode::UP || key == KeyCode::DOWN || key == KeyCode::ENTER || key == KeyCode::ESCAPE) && lastEnabledNo == jniSupport.getTextInputHandler().getEnabledNo()) {
                     if(!deadKey(key)) {
                         jniSupport.getTextInputHandler().setKeepLastCharOnce();
                     }
@@ -636,6 +685,30 @@ void WindowCallbacks::onGamepadAxis(int gamepad, GamepadAxisId ax, float value) 
     }
 }
 
+void WindowCallbacks::addKeyboardHook(void* user, bool (*hook)(void* user, int keyCode, int action)) {
+    keyboardHooksLock.lock();
+    keyboardHooks.emplace_back(KeyboardInputHook{.user = user, .hook = hook});
+    keyboardHooksLock.unlock();
+}
+
+void WindowCallbacks::addMouseClickHook(void* user, bool (*hook)(void* user, double x, double y, int button, int action)) {
+    mouseClickHooksLock.lock();
+    mouseClickHooks.emplace_back(MouseClickHook{.user = user, .hook = hook});
+    mouseClickHooksLock.unlock();
+}
+
+void WindowCallbacks::addMousePositionHook(void* user, bool (*hook)(void* user, double x, double y, bool relative)) {
+    mousePositionHooksLock.lock();
+    mousePositionHooks.emplace_back(MousePositionHook{.user = user, .hook = hook});
+    mousePositionHooksLock.unlock();
+}
+
+void WindowCallbacks::addMouseScrollHook(void* user, bool (*hook)(void* user, double x, double y, double dx, double dy)) {
+    mouseScrollHooksLock.lock();
+    mouseScrollHooks.emplace_back(MouseScrollHook{.user = user, .hook = hook});
+    mouseScrollHooksLock.unlock();
+}
+
 void WindowCallbacks::loadGamepadMappings() {
     auto windowManager = GameWindowManager::getManager();
     std::vector<std::string> controllerDbPaths;
@@ -658,11 +731,16 @@ WindowCallbacks::GamepadData::GamepadData() {
 
 int WindowCallbacks::mapMouseButtonToAndroid(int btn) {
     switch(btn) {
-        case 1: return AMOTION_EVENT_BUTTON_PRIMARY;
-        case 2: return AMOTION_EVENT_BUTTON_SECONDARY;
-        case 3: return AMOTION_EVENT_BUTTON_TERTIARY;
-        case 8: return AMOTION_EVENT_BUTTON_BACK;
-        case 9: return AMOTION_EVENT_BUTTON_FORWARD;
+    case 1:
+        return AMOTION_EVENT_BUTTON_PRIMARY;
+    case 2:
+        return AMOTION_EVENT_BUTTON_SECONDARY;
+    case 3:
+        return AMOTION_EVENT_BUTTON_TERTIARY;
+    case 8:
+        return AMOTION_EVENT_BUTTON_BACK;
+    case 9:
+        return AMOTION_EVENT_BUTTON_FORWARD;
     }
     return btn;
 }

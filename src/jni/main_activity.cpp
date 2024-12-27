@@ -18,6 +18,7 @@
 #include <climits>
 #include <sstream>
 #include <android/keycodes.h>
+#include "../core_patches.h"
 
 #include <log.h>
 
@@ -176,13 +177,13 @@ void MainActivity::requestIntegrityToken(std::shared_ptr<FakeJni::JString> str) 
 
 void MainActivity::launchUri(std::shared_ptr<FakeJni::JString> url) {
     int pid;
-    if ((pid = fork())) {
+    if((pid = fork())) {
     } else {
-    #ifdef __APPLE__
+#ifdef __APPLE__
         execl("/usr/bin/open", "/usr/bin/open", url->asStdString().c_str(), NULL);
-    #else
+#else
         execl("/usr/bin/xdg-open", "/usr/bin/xdg-open", url->asStdString().c_str(), NULL);
-    #endif
+#endif
         _Exit(0);
     }
 }
@@ -192,15 +193,15 @@ void MainActivity::setClipboard(std::shared_ptr<FakeJni::JString> tocopy) {
 }
 
 void MainActivity::share(std::shared_ptr<FakeJni::JString> title, std::shared_ptr<FakeJni::JString> string, std::shared_ptr<FakeJni::JString> url) {
-    if ((title->asStdString().find("\"") == std::string::npos) && (title->asStdString().find("\\") == std::string::npos) && (string->asStdString().find("\"") == std::string::npos) && (string->asStdString().find("\\") == std::string::npos)) {
+    if((title->asStdString().find("\"") == std::string::npos) && (title->asStdString().find("\\") == std::string::npos) && (string->asStdString().find("\"") == std::string::npos) && (string->asStdString().find("\\") == std::string::npos)) {
         int pid;
-        if ((pid = fork())) {
+        if((pid = fork())) {
         } else {
-        #ifdef __APPLE__
+#ifdef __APPLE__
             execl("/usr/bin/osascript", "/usr/bin/osascript", "-e", ("display alert \"" + title->asStdString() + "\" message \"" + string->asStdString() + "\n" + url->asStdString() + "\"").c_str(), NULL);
-        #else
+#else
             execl("/usr/bin/zenity", "/usr/bin/zenity", "--info", "--title", title->asStdString().c_str(), "--text", (string->asStdString() + "\n" + url->asStdString()).c_str(), NULL);
-        #endif
+#endif
             _Exit(0);
         }
     }
@@ -334,8 +335,7 @@ FakeJni::JInt MainActivity::getKeyFromKeyCode(FakeJni::JInt keyCode, FakeJni::JI
         return 0;
     }
     auto ret = lastChar;
-    switch (keyCode)
-    {
+    switch(keyCode) {
     case AKEYCODE_DEL:
     case AKEYCODE_FORWARD_DEL:
     case AKEYCODE_SHIFT_LEFT:
@@ -369,4 +369,12 @@ FakeJni::JInt MainActivity::getKeyFromKeyCode(FakeJni::JInt keyCode, FakeJni::JI
 
 void MainActivity::setLastChar(FakeJni::JInt sym) {
     lastChar = sym;
+}
+
+void MainActivity::lockCursor() {
+     CorePatches::hideMousePointer();
+}
+
+void MainActivity::unlockCursor() {
+    CorePatches::showMousePointer();
 }
