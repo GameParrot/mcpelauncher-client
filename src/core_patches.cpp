@@ -50,39 +50,35 @@ void CorePatches::setGameWindowCallbacks(std::shared_ptr<WindowCallbacks> gameWi
 void CorePatches::loadGameWindowLibrary() {
     std::unordered_map<std::string, void*> syms;
 
-    syms["gamewindow_getprimarywindow"] = (void*)+[]() -> GameWindowHandle* {
+    syms["game_window_get_primary_window"] = (void*)+[]() -> GameWindowHandle* {
         return &currentGameWindowHandle;
     };
 
-    syms["gamewindow_ismouselocked"] = (void*)+[](GameWindowHandle* handle) -> bool {
+    syms["game_window_is_mouse_locked"] = (void*)+[](GameWindowHandle* handle) -> bool {
         return handle->mouseLocked;
     };
 
-    syms["gamewindow_getinputmode"] = (void*)+[](GameWindowHandle* handle) -> int {
-        return (int)handle->callbacks->inputMode;
+    syms["game_window_get_input_mode"] = (void*)+[](GameWindowHandle* handle) -> int {
+        return (int)handle->callbacks->getInputMode();
     };
 
-    syms["gamewindow_sendkey"] = (void*)+[](GameWindowHandle* handle, int key, int action) {
-        handle->callbacks->onKeyboard((KeyCode)key, (KeyAction)action);
+    syms["game_window_add_keyboard_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int keyCode, int action)) {
+        handle->callbacks->addKeyboardCallback(user, callback);
     };
 
-    syms["gamewindow_addkeyboardinputhook"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*hook)(void* user, int keyCode, int action)) {
-        handle->callbacks->addKeyboardHook(user, hook);
+    syms["game_window_add_mouse_button_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, double x, double y, int button, int action)) {
+        handle->callbacks->addMouseButtonCallback(user, callback);
     };
 
-    syms["gamewindow_addmouseclickhook"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*hook)(void* user, double x, double y, int button, int action)) {
-        handle->callbacks->addMouseClickHook(user, hook);
+    syms["game_window_add_mouse_position_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, double x, double y, bool relative)) {
+        handle->callbacks->addMousePositionCallback(user, callback);
     };
 
-    syms["gamewindow_addmousepositionhook"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*hook)(void* user, double x, double y, bool relative)) {
-        handle->callbacks->addMousePositionHook(user, hook);
+    syms["game_window_add_mouse_scroll_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, double x, double y, double dx, double dy)) {
+        handle->callbacks->addMouseScrollCallback(user, callback);
     };
 
-    syms["gamewindow_addmousescrollhook"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*hook)(void* user, double x, double y, double dx, double dy)) {
-        handle->callbacks->addMouseScrollHook(user, hook);
-    };
-
-    syms["gamewindow_addwindowcreationcallback"] = (void*)+[](void* user, void (*onCreated)(void* user)) {
+    syms["game_window_add_window_creation_callback"] = (void*)+[](void* user, void (*onCreated)(void* user)) {
         onWindowCreatedCallbacks.emplace_back(std::bind(onCreated, user));
     };
 

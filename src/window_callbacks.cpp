@@ -95,6 +95,10 @@ void WindowCallbacks::setFullscreen(bool isFs) {
     }
 }
 
+WindowCallbacks::InputMode WindowCallbacks::getInputMode() {
+    return inputMode;
+}
+
 bool WindowCallbacks::hasInputMode(WindowCallbacks::InputMode want, bool changeMode) {
     if(!sendEvents) {
         return false;
@@ -126,14 +130,14 @@ bool WindowCallbacks::hasInputMode(WindowCallbacks::InputMode want, bool changeM
 
 void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonAction action) {
     if(hasInputMode(InputMode::Mouse)) {
-        if(mouseClickHooksLock.try_lock()) {
-            for(size_t i = 0; i < mouseClickHooks.size(); i++) {
-                if(mouseClickHooks[i].hook(mouseClickHooks[i].user, x, y, (int)btn, (int)action)) {
-                    mouseClickHooksLock.unlock();
+        if(mouseButtonCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < mouseButtonCallbacks.size(); i++) {
+                if(mouseButtonCallbacks[i].callback(mouseButtonCallbacks[i].user, x, y, (int)btn, (int)action)) {
+                    mouseButtonCallbacksLock.unlock();
                     return;
                 }
             }
-            mouseClickHooksLock.unlock();
+            mouseButtonCallbacksLock.unlock();
         }
         if(btn < 1)
             return;
@@ -172,14 +176,14 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
 }
 void WindowCallbacks::onMousePosition(double x, double y) {
     if(hasInputMode(InputMode::Mouse)) {
-        if(mousePositionHooksLock.try_lock()) {
-            for(size_t i = 0; i < mousePositionHooks.size(); i++) {
-                if(mousePositionHooks[i].hook(mousePositionHooks[i].user, x, y, false)) {
-                    mousePositionHooksLock.unlock();
+        if(mousePositionCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < mousePositionCallbacks.size(); i++) {
+                if(mousePositionCallbacks[i].callback(mousePositionCallbacks[i].user, x, y, false)) {
+                    mousePositionCallbacksLock.unlock();
                     return;
                 }
             }
-            mousePositionHooksLock.unlock();
+            mousePositionCallbacksLock.unlock();
         }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext()) {
@@ -199,14 +203,14 @@ void WindowCallbacks::onMousePosition(double x, double y) {
 }
 void WindowCallbacks::onMouseRelativePosition(double x, double y) {
     if(hasInputMode(InputMode::Mouse, std::abs(x) > 10 || std::abs(y) > 10)) {
-        if(mousePositionHooksLock.try_lock()) {
-            for(size_t i = 0; i < mousePositionHooks.size(); i++) {
-                if(mousePositionHooks[i].hook(mousePositionHooks[i].user, x, y, true)) {
-                    mousePositionHooksLock.unlock();
+        if(mousePositionCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < mousePositionCallbacks.size(); i++) {
+                if(mousePositionCallbacks[i].callback(mousePositionCallbacks[i].user, x, y, true)) {
+                    mousePositionCallbacksLock.unlock();
                     return;
                 }
             }
-            mousePositionHooksLock.unlock();
+            mousePositionCallbacksLock.unlock();
         }
         if(useDirectMouseInput)
             Mouse::feed(0, 0, 0, 0, (short)x, (short)y);
@@ -216,14 +220,14 @@ void WindowCallbacks::onMouseRelativePosition(double x, double y) {
 }
 void WindowCallbacks::onMouseScroll(double x, double y, double dx, double dy) {
     if(hasInputMode(InputMode::Mouse)) {
-        if(mouseScrollHooksLock.try_lock()) {
-            for(size_t i = 0; i < mouseScrollHooks.size(); i++) {
-                if(mouseScrollHooks[i].hook(mouseScrollHooks[i].user, x, y, dx, dy)) {
-                    mouseScrollHooksLock.unlock();
+        if(mouseScrollCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < mouseScrollCallbacks.size(); i++) {
+                if(mouseScrollCallbacks[i].callback(mouseScrollCallbacks[i].user, x, y, dx, dy)) {
+                    mouseScrollCallbacksLock.unlock();
                     return;
                 }
             }
-            mouseScrollHooksLock.unlock();
+            mouseScrollCallbacksLock.unlock();
         }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext()) {
@@ -443,14 +447,14 @@ static ImGuiKey mapImGuiModKey(KeyCode code) {
 
 void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
     if(hasInputMode(InputMode::Mouse)) {
-        if(keyboardHooksLock.try_lock()) {
-            for(size_t i = 0; i < keyboardHooks.size(); i++) {
-                if(keyboardHooks[i].hook(keyboardHooks[i].user, (int)key, (int)action)) {
-                    keyboardHooksLock.unlock();
+        if(keyboardCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < keyboardCallbacks.size(); i++) {
+                if(keyboardCallbacks[i].callback(keyboardCallbacks[i].user, (int)key, (int)action)) {
+                    keyboardCallbacksLock.unlock();
                     return;
                 }
             }
-            keyboardHooksLock.unlock();
+            keyboardCallbacksLock.unlock();
         }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext()) {
@@ -685,28 +689,28 @@ void WindowCallbacks::onGamepadAxis(int gamepad, GamepadAxisId ax, float value) 
     }
 }
 
-void WindowCallbacks::addKeyboardHook(void* user, bool (*hook)(void* user, int keyCode, int action)) {
-    keyboardHooksLock.lock();
-    keyboardHooks.emplace_back(KeyboardInputHook{.user = user, .hook = hook});
-    keyboardHooksLock.unlock();
+void WindowCallbacks::addKeyboardCallback(void* user, bool (*callback)(void* user, int keyCode, int action)) {
+    keyboardCallbacksLock.lock();
+    keyboardCallbacks.emplace_back(KeyboardInputCallback{.user = user, .callback = callback});
+    keyboardCallbacksLock.unlock();
 }
 
-void WindowCallbacks::addMouseClickHook(void* user, bool (*hook)(void* user, double x, double y, int button, int action)) {
-    mouseClickHooksLock.lock();
-    mouseClickHooks.emplace_back(MouseClickHook{.user = user, .hook = hook});
-    mouseClickHooksLock.unlock();
+void WindowCallbacks::addMouseButtonCallback(void* user, bool (*callback)(void* user, double x, double y, int button, int action)) {
+    mouseButtonCallbacksLock.lock();
+    mouseButtonCallbacks.emplace_back(MouseButtonCallback{.user = user, .callback = callback});
+    mouseButtonCallbacksLock.unlock();
 }
 
-void WindowCallbacks::addMousePositionHook(void* user, bool (*hook)(void* user, double x, double y, bool relative)) {
-    mousePositionHooksLock.lock();
-    mousePositionHooks.emplace_back(MousePositionHook{.user = user, .hook = hook});
-    mousePositionHooksLock.unlock();
+void WindowCallbacks::addMousePositionCallback(void* user, bool (*callback)(void* user, double x, double y, bool relative)) {
+    mousePositionCallbacksLock.lock();
+    mousePositionCallbacks.emplace_back(MousePositionCallback{.user = user, .callback = callback});
+    mousePositionCallbacksLock.unlock();
 }
 
-void WindowCallbacks::addMouseScrollHook(void* user, bool (*hook)(void* user, double x, double y, double dx, double dy)) {
-    mouseScrollHooksLock.lock();
-    mouseScrollHooks.emplace_back(MouseScrollHook{.user = user, .hook = hook});
-    mouseScrollHooksLock.unlock();
+void WindowCallbacks::addMouseScrollCallback(void* user, bool (*callback)(void* user, double x, double y, double dx, double dy)) {
+    mouseScrollCallbacksLock.lock();
+    mouseScrollCallbacks.emplace_back(MouseScrollCallback{.user = user, .callback = callback});
+    mouseScrollCallbacksLock.unlock();
 }
 
 void WindowCallbacks::loadGamepadMappings() {

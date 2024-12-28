@@ -19,31 +19,31 @@ private:
 
         GamepadData();
     };
-    struct KeyboardInputHook {
+    struct KeyboardInputCallback {
         void *user;
-        bool (*hook)(void *user, int keyCode, int action);
+        bool (*callback)(void *user, int keyCode, int action);
     };
-    struct MouseClickHook {
+    struct MouseButtonCallback {
         void *user;
-        bool (*hook)(void *user, double x, double y, int button, int action);
+        bool (*callback)(void *user, double x, double y, int button, int action);
     };
-    struct MousePositionHook {
+    struct MousePositionCallback {
         void *user;
-        bool (*hook)(void *user, double x, double y, bool relative);
+        bool (*callback)(void *user, double x, double y, bool relative);
     };
-    struct MouseScrollHook {
+    struct MouseScrollCallback {
         void *user;
-        bool (*hook)(void *user, double x, double y, double dx, double dy);
+        bool (*callback)(void *user, double x, double y, double dx, double dy);
     };
 
-    std::vector<KeyboardInputHook> keyboardHooks;
-    std::vector<MouseClickHook> mouseClickHooks;
-    std::vector<MousePositionHook> mousePositionHooks;
-    std::vector<MouseScrollHook> mouseScrollHooks;
-    std::mutex keyboardHooksLock;
-    std::mutex mouseClickHooksLock;
-    std::mutex mousePositionHooksLock;
-    std::mutex mouseScrollHooksLock;
+    std::vector<KeyboardInputCallback> keyboardCallbacks;
+    std::vector<MouseButtonCallback> mouseButtonCallbacks;
+    std::vector<MousePositionCallback> mousePositionCallbacks;
+    std::vector<MouseScrollCallback> mouseScrollCallbacks;
+    std::mutex keyboardCallbacksLock;
+    std::mutex mouseButtonCallbacksLock;
+    std::mutex mousePositionCallbacksLock;
+    std::mutex mouseScrollCallbacksLock;
 
     GameWindow &window;
     JniSupport &jniSupport;
@@ -68,6 +68,7 @@ private:
     };
     int imGuiTouchId = -1;
     bool useRawInput = false;
+    InputMode inputMode = InputMode::Unknown;
     InputMode forcedMode = InputMode::Unknown;
     int inputModeSwitchDelay = 100;
     std::chrono::high_resolution_clock::time_point lastUpdated;
@@ -94,6 +95,8 @@ public:
 
     void setFullscreen(bool isFs);
 
+    InputMode getInputMode();
+
     void onMouseButton(double x, double y, int btn, MouseButtonAction action);
     void onMousePosition(double x, double y);
     void onMouseRelativePosition(double x, double y);
@@ -108,16 +111,14 @@ public:
     void onGamepadButton(int gamepad, GamepadButtonId btn, bool pressed);
     void onGamepadAxis(int gamepad, GamepadAxisId ax, float value);
 
-    void addKeyboardHook(void *user, bool (*hook)(void *user, int keyCode, int action));
-    void addMouseClickHook(void *user, bool (*hook)(void *user, double x, double y, int button, int action));
-    void addMousePositionHook(void *user, bool (*hook)(void *user, double x, double y, bool relative));
-    void addMouseScrollHook(void *user, bool (*hook)(void *user, double x, double y, double dx, double dy));
+    void addKeyboardCallback(void *user, bool (*callback)(void *user, int keyCode, int action));
+    void addMouseButtonCallback(void *user, bool (*callback)(void *user, double x, double y, int button, int action));
+    void addMousePositionCallback(void *user, bool (*callback)(void *user, double x, double y, bool relative));
+    void addMouseScrollCallback(void *user, bool (*callback)(void *user, double x, double y, double dx, double dy));
 
     static int mapMouseButtonToAndroid(int btn);
     static int mapMinecraftToAndroidKey(KeyCode code);
     static int mapGamepadToAndroidKey(GamepadButtonId btn);
-
-    InputMode inputMode = InputMode::Unknown;
 #ifdef USE_IMGUI
     static ImGuiKey mapImGuiKey(KeyCode code);
 #endif
