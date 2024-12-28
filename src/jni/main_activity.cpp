@@ -17,6 +17,7 @@
 #include "uuid.h"
 #include <climits>
 #include <sstream>
+#include <fstream>
 #include <android/keycodes.h>
 #include "../core_patches.h"
 
@@ -207,6 +208,21 @@ void MainActivity::share(std::shared_ptr<FakeJni::JString> title, std::shared_pt
     }
 }
 
+void MainActivity::shareFile(std::shared_ptr<FakeJni::JString> title, std::shared_ptr<FakeJni::JString> string, std::shared_ptr<FakeJni::JString> path) {
+    auto picker = FilePickerFactory::createFilePicker();
+    picker->setMode(FilePicker::Mode::SAVE);
+    picker->setTitle(title->asStdString());
+    std::string pathStr = path->asStdString();
+    picker->setFileName(pathStr.substr(pathStr.find_last_of("/\\") + 1));
+    if(picker->show()) {
+        std::ifstream src(pathStr, std::ios::binary);
+        std::ofstream dst(picker->getPickedFile(), std::ios::binary);
+        dst << src.rdbuf();
+        src.close();
+        dst.close();
+    }
+}
+
 FakeJni::JInt MainActivity::getCaretPosition() {
     ignoreNextHideKeyboard = false;
     if(textInput) {
@@ -372,7 +388,7 @@ void MainActivity::setLastChar(FakeJni::JInt sym) {
 }
 
 void MainActivity::lockCursor() {
-     CorePatches::hideMousePointer();
+    CorePatches::hideMousePointer();
 }
 
 void MainActivity::unlockCursor() {

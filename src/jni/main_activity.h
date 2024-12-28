@@ -209,6 +209,7 @@ public:
 
     void launchUri(std::shared_ptr<FakeJni::JString>);
     void share(std::shared_ptr<FakeJni::JString>, std::shared_ptr<FakeJni::JString>, std::shared_ptr<FakeJni::JString>);
+    void shareFile(std::shared_ptr<FakeJni::JString>, std::shared_ptr<FakeJni::JString>, std::shared_ptr<FakeJni::JString>);
     std::shared_ptr<FakeJni::JArray<FakeJni::JString>> getBroadcastAddresses() {
         return std::make_shared<FakeJni::JArray<FakeJni::JString>>();
     }
