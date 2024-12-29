@@ -9,8 +9,15 @@ struct Settings {
     static bool enable_keyboard_tab_patches_1_20_60;
     static bool enable_keyboard_autofocus_patches_1_20_60;
     static bool enable_menubar;
-    static int fps_hud_location;
-    static int keystroke_mouse_hud_location;
+
+    static int enable_fps_hud;
+    static float fps_hud_x;
+    static float fps_hud_y;
+
+    static int enable_keystroke_hud;
+    static float keystroke_hud_x;
+    static float keystroke_hud_y;
+
     static std::string videoMode;
     static float scale;
     static std::string menubarFocusKey;

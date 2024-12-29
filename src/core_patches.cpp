@@ -32,6 +32,10 @@ void CorePatches::hideMousePointer() {
     currentGameWindowHandle.callbacks->setCursorLocked(true);
 }
 
+bool CorePatches::isMouseLocked() {
+    return currentGameWindowHandle.mouseLocked;
+}
+
 void CorePatches::setFullscreen(void* t, bool fullscreen) {
     currentGameWindowHandle.callbacks->setFullscreen(fullscreen);
 }

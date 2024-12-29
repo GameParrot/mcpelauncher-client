@@ -10,8 +10,15 @@ std::string Settings::clipboard;
 bool Settings::enable_keyboard_autofocus_patches_1_20_60 = false;
 bool Settings::enable_keyboard_tab_patches_1_20_60 = false;
 bool Settings::enable_menubar = true;
-int Settings::fps_hud_location;
-int Settings::keystroke_mouse_hud_location;
+
+int Settings::enable_fps_hud;
+float Settings::fps_hud_x;
+float Settings::fps_hud_y;
+
+int Settings::enable_keystroke_hud;
+float Settings::keystroke_hud_x;
+float Settings::keystroke_hud_y;
+
 std::string Settings::videoMode;
 float Settings::scale;
 std::string Settings::menubarFocusKey;
@@ -34,8 +41,15 @@ static properties::property<std::string> enable_imgui(settings, "enable_imgui", 
 static properties::property<bool> enable_keyboard_autofocus_patches_1_20_60(settings, "enable_keyboard_autofocus_patches_1_20_60", /* default if not defined*/ false);
 static properties::property<bool> enable_keyboard_tab_patches_1_20_60(settings, "enable_keyboard_tab_patches_1_20_60", /* default if not defined*/ false);
 static properties::property<bool> enable_menubar(settings, "enable_menubar", /* default if not defined*/ true);
-static properties::property<int> fps_hud_location(settings, "fps_hud_location", /* default if not defined*/ -1);
-static properties::property<int> keystroke_mouse_hud_location(settings, "keystroke_mouse_hud_location", /* default if not defined*/ -1);
+
+static properties::property<int> enable_fps_hud(settings, "enable_fps_hud", /* default if not defined*/ false);
+static properties::property<float> fps_hud_x(settings, "fps_hud_x", /* default if not defined*/ 0);
+static properties::property<float> fps_hud_y(settings, "fps_hud_y", /* default if not defined*/ 0);
+
+static properties::property<int> enable_keystroke_hud(settings, "enable_keystroke_hud", /* default if not defined*/ false);
+static properties::property<float> keystroke_hud_x(settings, "keystroke_hud_x", /* default if not defined*/ 0);
+static properties::property<float> keystroke_hud_y(settings, "keystroke_hud_y", /* default if not defined*/ 0);
+
 static properties::property<std::string> videoMode(settings, "videoMode", "");
 static properties::property<float> scale(settings, "scale", 1);
 static properties::property<std::string> menubarFocusKey(settings, "menubarFocusKey", "");
@@ -47,7 +61,7 @@ std::string Settings::getPath() {
 
 void Settings::load() {
     std::ifstream propertiesFile(getPath());
-    if (propertiesFile) {
+    if(propertiesFile) {
         settings.load(propertiesFile);
     }
     if(::enable_imgui.get() != "auto") {
@@ -59,8 +73,15 @@ void Settings::load() {
     Settings::enable_keyboard_autofocus_patches_1_20_60 = ::enable_keyboard_autofocus_patches_1_20_60.get();
     Settings::enable_keyboard_tab_patches_1_20_60 = ::enable_keyboard_tab_patches_1_20_60.get();
     Settings::enable_menubar = ::enable_menubar.get();
-    Settings::fps_hud_location = ::fps_hud_location.get();
-    Settings::keystroke_mouse_hud_location = ::keystroke_mouse_hud_location.get();
+
+    Settings::enable_fps_hud = ::enable_fps_hud.get();
+    Settings::fps_hud_x = ::fps_hud_x.get();
+    Settings::fps_hud_y = ::fps_hud_y.get();
+
+    Settings::enable_keystroke_hud = ::enable_keystroke_hud.get();
+    Settings::keystroke_hud_x = ::keystroke_hud_x.get();
+    Settings::keystroke_hud_y = ::keystroke_hud_y.get();
+
     Settings::videoMode = ::videoMode.get();
     Settings::scale = ::scale.get();
     Settings::menubarFocusKey = ::menubarFocusKey.get();
@@ -76,14 +97,21 @@ void Settings::save() {
     ::enable_keyboard_autofocus_patches_1_20_60.set(Settings::enable_keyboard_autofocus_patches_1_20_60);
     ::enable_keyboard_tab_patches_1_20_60.set(Settings::enable_keyboard_tab_patches_1_20_60);
     ::enable_menubar.set(Settings::enable_menubar);
-    ::fps_hud_location.set(Settings::fps_hud_location);
-    ::keystroke_mouse_hud_location.set(Settings::keystroke_mouse_hud_location);
+
+    ::enable_fps_hud.set(Settings::enable_fps_hud);
+    ::fps_hud_x.set(Settings::fps_hud_x);
+    ::fps_hud_y.set(Settings::fps_hud_y);
+
+    ::enable_keystroke_hud.set(Settings::enable_keystroke_hud);
+    ::keystroke_hud_x.set(Settings::keystroke_hud_x);
+    ::keystroke_hud_y.set(Settings::keystroke_hud_y);
+
     ::videoMode.set(Settings::videoMode);
     ::scale.set(Settings::scale);
     ::menubarFocusKey.set(Settings::menubarFocusKey);
     std::ofstream propertiesFile(getPath());
     ::fullscreen.set(Settings::fullscreen);
-    if (propertiesFile) {
+    if(propertiesFile) {
         settings.save(propertiesFile);
     }
 }
