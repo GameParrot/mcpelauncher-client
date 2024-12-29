@@ -252,6 +252,9 @@ void WindowCallbacks::onMouseScroll(double x, double y, double dx, double dy) {
 }
 void WindowCallbacks::onTouchStart(int id, double x, double y) {
     if(hasInputMode(InputMode::Touch)) {
+        if(callTouchEventCallbacks(touchStartCallbacks, touchStartCallbacksLock, id, x, y)) {
+            return;
+        }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext() && imGuiTouchId == -1) {
             imGuiTouchId = id;
@@ -269,6 +272,9 @@ void WindowCallbacks::onTouchStart(int id, double x, double y) {
 }
 void WindowCallbacks::onTouchUpdate(int id, double x, double y) {
     if(hasInputMode(InputMode::Touch)) {
+        if(callTouchEventCallbacks(touchUpdateCallbacks, touchUpdateCallbacksLock, id, x, y)) {
+            return;
+        }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext() && imGuiTouchId == id) {
             ImGuiIO& io = ImGui::GetIO();
@@ -282,6 +288,9 @@ void WindowCallbacks::onTouchUpdate(int id, double x, double y) {
 }
 void WindowCallbacks::onTouchEnd(int id, double x, double y) {
     if(hasInputMode(InputMode::Touch)) {
+        if(callTouchEventCallbacks(touchEndCallbacks, touchEndCallbacksLock, id, x, y)) {
+            return;
+        }
 #ifdef USE_IMGUI
         if(ImGui::GetCurrentContext() && imGuiTouchId == id) {
             imGuiTouchId = -1;
@@ -664,6 +673,16 @@ void WindowCallbacks::onGamepadButton(int gamepad, GamepadButtonId btn, bool pre
             return;
         gp.button[(int)btn] = pressed;
 
+        if(gamepadButtonCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < gamepadButtonCallbacks.size(); i++) {
+                if(gamepadButtonCallbacks[i].callback(gamepadButtonCallbacks[i].user, (int)btn, pressed)) {
+                    gamepadButtonCallbacksLock.unlock();
+                    return;
+                }
+            }
+            gamepadButtonCallbacksLock.unlock();
+        }
+
         if(btn == GamepadButtonId::DPAD_UP || btn == GamepadButtonId::DPAD_DOWN || btn == GamepadButtonId::DPAD_LEFT || btn == GamepadButtonId::DPAD_RIGHT) {
             queueGamepadAxisInputIfNeeded(gamepad);
             return;
@@ -685,6 +704,17 @@ void WindowCallbacks::onGamepadAxis(int gamepad, GamepadAxisId ax, float value) 
         if((int)ax < 0 || (int)ax >= 6)
             throw std::runtime_error("bad axis id");
         gp.axis[(int)ax] = value;
+
+        if(gamepadAxisCallbacksLock.try_lock()) {
+            for(size_t i = 0; i < gamepadAxisCallbacks.size(); i++) {
+                if(gamepadAxisCallbacks[i].callback(gamepadAxisCallbacks[i].user, (int)ax, value)) {
+                    gamepadAxisCallbacksLock.unlock();
+                    return;
+                }
+            }
+            gamepadAxisCallbacksLock.unlock();
+        }
+
         queueGamepadAxisInputIfNeeded(gamepad);
     }
 }
@@ -711,6 +741,37 @@ void WindowCallbacks::addMouseScrollCallback(void* user, bool (*callback)(void* 
     mouseScrollCallbacksLock.lock();
     mouseScrollCallbacks.emplace_back(MouseScrollCallback{.user = user, .callback = callback});
     mouseScrollCallbacksLock.unlock();
+}
+
+void WindowCallbacks::addGamepadButtonCallback(void* user, bool (*callback)(void* user, int btn, bool pressed)) {
+    gamepadButtonCallbacksLock.lock();
+    gamepadButtonCallbacks.emplace_back(GamepadButtonCallback{.user = user, .callback = callback});
+    gamepadButtonCallbacksLock.unlock();
+}
+
+void WindowCallbacks::addGamepadAxisCallback(void* user, bool (*callback)(void* user, int ax, float value)) {
+    gamepadAxisCallbacksLock.lock();
+    gamepadAxisCallbacks.emplace_back(GamepadAxisCallback{.user = user, .callback = callback});
+    gamepadAxisCallbacksLock.unlock();
+}
+
+void WindowCallbacks::addTouchEventCallback(std::vector<TouchEventCallback>& callbacks, std::mutex& lock, void* user, bool (*callback)(void* user, int id, double x, double y)) {
+    lock.lock();
+    callbacks.emplace_back(TouchEventCallback{.user = user, .callback = callback});
+    lock.unlock();
+}
+
+bool WindowCallbacks::callTouchEventCallbacks(std::vector<TouchEventCallback>& callbacks, std::mutex& lock, int id, double x, double y) {
+    if(lock.try_lock()) {
+        for(size_t i = 0; i < callbacks.size(); i++) {
+            if(callbacks[i].callback(callbacks[i].user, id, x, y)) {
+                lock.unlock();
+                return true;
+            }
+        }
+        lock.unlock();
+    }
+    return false;
 }
 
 void WindowCallbacks::loadGamepadMappings() {

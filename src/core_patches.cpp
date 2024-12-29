@@ -78,6 +78,26 @@ void CorePatches::loadGameWindowLibrary() {
         handle->callbacks->addMouseScrollCallback(user, callback);
     };
 
+    syms["game_window_add_gamepad_button_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int btn, bool pressed)) {
+        handle->callbacks->addGamepadButtonCallback(user, callback);
+    };
+
+    syms["game_window_add_gamepad_axis_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int ax, float value)) {
+        handle->callbacks->addGamepadAxisCallback(user, callback);
+    };
+
+    syms["game_window_add_touch_start_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int id, double x, double y)) {
+        handle->callbacks->addTouchStartCallback(user, callback);
+    };
+
+    syms["game_window_add_touch_update_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int id, double x, double y)) {
+        handle->callbacks->addTouchUpdateCallback(user, callback);
+    };
+
+    syms["game_window_add_touch_end_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int id, double x, double y)) {
+        handle->callbacks->addTouchEndCallback(user, callback);
+    };
+
     syms["game_window_add_window_creation_callback"] = (void*)+[](void* user, void (*onCreated)(void* user)) {
         onWindowCreatedCallbacks.emplace_back(std::bind(onCreated, user));
     };

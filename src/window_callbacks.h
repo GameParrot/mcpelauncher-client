@@ -36,14 +36,43 @@ private:
         bool (*callback)(void *user, double x, double y, double dx, double dy);
     };
 
+    struct GamepadButtonCallback {
+        void *user;
+        bool (*callback)(void *user, int btn, bool pressed);
+    };
+    struct GamepadAxisCallback {
+        void *user;
+        bool (*callback)(void *user, int ax, float value);
+    };
+
+    struct TouchEventCallback {
+        void *user;
+        bool (*callback)(void *user, int id, double x, double y);
+    };
+
     std::vector<KeyboardInputCallback> keyboardCallbacks;
     std::vector<MouseButtonCallback> mouseButtonCallbacks;
     std::vector<MousePositionCallback> mousePositionCallbacks;
     std::vector<MouseScrollCallback> mouseScrollCallbacks;
+
+    std::vector<GamepadButtonCallback> gamepadButtonCallbacks;
+    std::vector<GamepadAxisCallback> gamepadAxisCallbacks;
+
+    std::vector<TouchEventCallback> touchStartCallbacks;
+    std::vector<TouchEventCallback> touchUpdateCallbacks;
+    std::vector<TouchEventCallback> touchEndCallbacks;
+
     std::mutex keyboardCallbacksLock;
     std::mutex mouseButtonCallbacksLock;
     std::mutex mousePositionCallbacksLock;
     std::mutex mouseScrollCallbacksLock;
+
+    std::mutex gamepadButtonCallbacksLock;
+    std::mutex gamepadAxisCallbacksLock;
+
+    std::mutex touchStartCallbacksLock;
+    std::mutex touchUpdateCallbacksLock;
+    std::mutex touchEndCallbacksLock;
 
     GameWindow &window;
     JniSupport &jniSupport;
@@ -75,6 +104,9 @@ private:
     bool hasInputMode(InputMode want = InputMode::Unknown, bool changeMode = true);
 
     void queueGamepadAxisInputIfNeeded(int gamepad);
+
+    void addTouchEventCallback(std::vector<TouchEventCallback> &callbacks, std::mutex &lock, void *user, bool (*callback)(void *user, int id, double x, double y));
+    bool callTouchEventCallbacks(std::vector<TouchEventCallback> &callbacks, std::mutex &lock, int id, double x, double y);
 
 public:
     WindowCallbacks(GameWindow &window, JniSupport &jniSupport, FakeInputQueue &inputQueue);
@@ -115,6 +147,19 @@ public:
     void addMouseButtonCallback(void *user, bool (*callback)(void *user, double x, double y, int button, int action));
     void addMousePositionCallback(void *user, bool (*callback)(void *user, double x, double y, bool relative));
     void addMouseScrollCallback(void *user, bool (*callback)(void *user, double x, double y, double dx, double dy));
+
+    void addGamepadButtonCallback(void *user, bool (*callback)(void *user, int btn, bool pressed));
+    void addGamepadAxisCallback(void *user, bool (*callback)(void *user, int ax, float value));
+
+    void addTouchStartCallback(void *user, bool (*callback)(void *user, int id, double x, double y)) {
+        addTouchEventCallback(touchStartCallbacks, touchStartCallbacksLock, user, callback);
+    }
+    void addTouchUpdateCallback(void *user, bool (*callback)(void *user, int id, double x, double y)) {
+        addTouchEventCallback(touchUpdateCallbacks, touchUpdateCallbacksLock, user, callback);
+    }
+    void addTouchEndCallback(void *user, bool (*callback)(void *user, int id, double x, double y)) {
+        addTouchEventCallback(touchEndCallbacks, touchEndCallbacksLock, user, callback);
+    }
 
     static int mapMouseButtonToAndroid(int btn);
     static int mapMinecraftToAndroidKey(KeyCode code);
