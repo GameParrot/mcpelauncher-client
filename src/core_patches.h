@@ -17,6 +17,15 @@ private:
 
     static std::vector<std::function<void()>> onWindowCreatedCallbacks;
 
+    struct MouseDisabledCallback {
+        void* user;
+        void (*callback)(void* user, bool disabled);
+    };
+    static std::vector<MouseDisabledCallback> mouseDisabledCallbacks;
+    static std::mutex mouseDisabledCallbacksLock;
+
+    static void callMouseDisabledCallbacks(bool disabled);
+
 public:
     static void
     install(void* handle);

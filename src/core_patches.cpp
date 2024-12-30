@@ -1,4 +1,5 @@
 #include "core_patches.h"
+#include "fake_egl.h"
 
 #include <mcpelauncher/linker.h>
 #include <mcpelauncher/patch_utils.h>
@@ -6,6 +7,9 @@
 
 CorePatches::GameWindowHandle CorePatches::currentGameWindowHandle;
 std::vector<std::function<void()>> CorePatches::onWindowCreatedCallbacks;
+
+std::vector<CorePatches::MouseDisabledCallback> CorePatches::mouseDisabledCallbacks;
+std::mutex CorePatches::mouseDisabledCallbacksLock;
 
 void CorePatches::install(void* handle) {
     // void* ptr = linker::dlsym(handle, "_ZN3web4http6client7details35verify_cert_chain_platform_specificERN5boost4asio3ssl14verify_contextERKSs");
@@ -25,11 +29,13 @@ void CorePatches::install(void* handle) {
 void CorePatches::showMousePointer() {
     currentGameWindowHandle.mouseLocked = false;
     currentGameWindowHandle.callbacks->setCursorLocked(false);
+    callMouseDisabledCallbacks(false);
 }
 
 void CorePatches::hideMousePointer() {
     currentGameWindowHandle.mouseLocked = true;
     currentGameWindowHandle.callbacks->setCursorLocked(true);
+    callMouseDisabledCallbacks(true);
 }
 
 void CorePatches::setFullscreen(void* t, bool fullscreen) {
@@ -44,6 +50,15 @@ void CorePatches::setGameWindowCallbacks(std::shared_ptr<WindowCallbacks> gameWi
     currentGameWindowHandle.callbacks = gameWindowCallbacks;
     for(size_t i = 0; i < onWindowCreatedCallbacks.size(); i++) {
         onWindowCreatedCallbacks[i]();
+    }
+}
+
+void CorePatches::callMouseDisabledCallbacks(bool disabled) {
+    if(mouseDisabledCallbacksLock.try_lock()) {
+        for(size_t i = 0; i < mouseDisabledCallbacks.size(); i++) {
+            mouseDisabledCallbacks[i].callback(mouseDisabledCallbacks[i].user, disabled);
+        }
+        mouseDisabledCallbacksLock.unlock();
     }
 }
 
@@ -100,6 +115,18 @@ void CorePatches::loadGameWindowLibrary() {
 
     syms["game_window_add_window_creation_callback"] = (void*)+[](void* user, void (*onCreated)(void* user)) {
         onWindowCreatedCallbacks.emplace_back(std::bind(onCreated, user));
+    };
+
+    syms["game_window_add_mouse_disabled_callback"] = (void*)+[](void* user, void (*callback)(void* user, bool disabled)) {
+        mouseDisabledCallbacksLock.lock();
+        mouseDisabledCallbacks.emplace_back(MouseDisabledCallback{.user = user, .callback = callback});
+        mouseDisabledCallbacksLock.unlock();
+    };
+
+    syms["game_window_add_swap_buffers_callback"] = (void*)+[](void* user, void (*callback)(void* user, EGLDisplay display, EGLSurface surface)) {
+        FakeEGL::swapBuffersCallbacksLock.lock();
+        FakeEGL::swapBuffersCallbacks.emplace_back(FakeEGL::SwapBuffersCallback{.user = user, .callback = callback});
+        FakeEGL::swapBuffersCallbacksLock.unlock();
     };
 
     linker::load_library("libmcpelauncher_gamewindow.so", syms);
