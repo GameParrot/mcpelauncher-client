@@ -77,6 +77,22 @@ void CorePatches::loadGameWindowLibrary() {
         return (int)handle->callbacks->getInputMode();
     };
 
+    syms["game_window_send_key"] = (void*)+[](GameWindowHandle* handle, int key, int action) {
+        handle->callbacks->onKeyboard((KeyCode)key, (KeyAction)action);
+    };
+
+    syms["game_window_send_mouse_position"] = (void*)+[](GameWindowHandle* handle, double x, double y, bool relative) {
+        if(relative) {
+            handle->callbacks->onMouseRelativePosition(x, y);
+        } else {
+            handle->callbacks->onMousePosition(x, y);
+        }
+    };
+
+    syms["game_window_send_mouse_scroll"] = (void*)+[](GameWindowHandle* handle, double x, double y, double dx, double dy) {
+        handle->callbacks->onMouseScroll(x, y, dx, dy);
+    };
+
     syms["game_window_add_keyboard_callback"] = (void*)+[](GameWindowHandle* handle, void* user, bool (*callback)(void* user, int keyCode, int action)) {
         handle->callbacks->addKeyboardCallback(user, callback);
     };
