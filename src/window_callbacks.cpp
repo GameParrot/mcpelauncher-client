@@ -52,6 +52,7 @@ void WindowCallbacks::registerCallbacks() {
     window.setTouchEndCallback(std::bind(&WindowCallbacks::onTouchEnd, this, _1, _2, _3));
     window.setKeyboardCallback(std::bind(&WindowCallbacks::onKeyboard, this, _1, _2));
     window.setKeyboardTextCallback(std::bind(&WindowCallbacks::onKeyboardText, this, _1));
+    window.setDropCallback(std::bind(&WindowCallbacks::onDrop, this, _1));
     window.setPasteCallback(std::bind(&WindowCallbacks::onPaste, this, _1));
     window.setGamepadStateCallback(std::bind(&WindowCallbacks::onGamepadState, this, _1, _2));
     window.setGamepadButtonCallback(std::bind(&WindowCallbacks::onGamepadButton, this, _1, _2, _3));
@@ -590,6 +591,9 @@ void WindowCallbacks::onKeyboardText(std::string const& c) {
         jniSupport.onReturnKeyPressed();
     else
         jniSupport.getTextInputHandler().onTextInput(c);
+}
+void WindowCallbacks::onDrop(std::string const &path) {
+    jniSupport.importFile(path);
 }
 void WindowCallbacks::onPaste(std::string const& str) {
 #ifdef USE_IMGUI

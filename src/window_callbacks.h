@@ -106,6 +106,7 @@ public:
     void onTouchEnd(int id, double x, double y);
     void onKeyboard(KeyCode key, KeyAction action);
     void onKeyboardText(std::string const &c);
+    void onDrop(std::string const &path);
     void onPaste(std::string const &str);
     void onGamepadState(int gamepad, bool connected);
     void onGamepadButton(int gamepad, GamepadButtonId btn, bool pressed);
