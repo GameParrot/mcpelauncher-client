@@ -51,18 +51,18 @@ void TextInputHandler::onTextInput(std::string const &text) {
         if(currentTextPositionUTF <= 0)
             return;
         auto deleteStart = currentTextPosition - 1;
-        if (altPressed) {
-            if (strchr(spaces, currentText[deleteStart])) {
-                while (deleteStart > 0) {
+        if(altPressed) {
+            if(strchr(spaces, currentText[deleteStart])) {
+                while(deleteStart > 0) {
                     deleteStart--;
-                    if (deleteStart < 1 || !strchr(spaces, currentText[deleteStart - 1]) || !strchr(spaces, currentText[deleteStart])) {
+                    if(deleteStart < 1 || !strchr(spaces, currentText[deleteStart - 1]) || !strchr(spaces, currentText[deleteStart])) {
                         break;
                     }
                 }
             }
-            while (deleteStart > 0) {
+            while(deleteStart > 0) {
                 deleteStart--;
-                if (deleteStart < 1 || strchr(spaces, currentText[deleteStart - 1]) || strchr(spaces, currentText[deleteStart])) {
+                if(deleteStart < 1 || strchr(spaces, currentText[deleteStart - 1]) || strchr(spaces, currentText[deleteStart])) {
                     break;
                 }
             }
@@ -88,6 +88,7 @@ void TextInputHandler::onTextInput(std::string const &text) {
     }
     textUpdateCallback(currentText);
     currentTextCopyPosition = currentTextPosition;
+    caretPositionCallback(getCursorPosition());
 }
 
 void TextInputHandler::onKeyPressed(KeyCode key, KeyAction action) {
@@ -95,24 +96,24 @@ void TextInputHandler::onKeyPressed(KeyCode key, KeyAction action) {
         shiftPressed = (action != KeyAction::RELEASE);
     if(key == KeyCode::LEFT_ALT || key == KeyCode::RIGHT_ALT)
         altPressed = (action != KeyAction::RELEASE);
-    
+
     if(action != KeyAction::PRESS && action != KeyAction::REPEAT)
         return;
     if(key == KeyCode::RIGHT) {
         if(currentTextPosition >= currentText.size())
             return;
-        if (altPressed) {
-            if (strchr(spaces, currentText[currentTextPosition])) {
-                while (currentTextPosition < currentText.size()) {
+        if(altPressed) {
+            if(strchr(spaces, currentText[currentTextPosition])) {
+                while(currentTextPosition < currentText.size()) {
                     currentTextPosition++;
-                    if (currentTextPosition >= currentText.size() || !strchr(spaces, currentText[currentTextPosition])) {
+                    if(currentTextPosition >= currentText.size() || !strchr(spaces, currentText[currentTextPosition])) {
                         break;
                     }
                 }
             }
-            while (currentTextPosition < currentText.size()) {
+            while(currentTextPosition < currentText.size()) {
                 currentTextPosition++;
-                if (currentTextPosition >= currentText.size() || strchr(spaces, currentText[currentTextPosition])) {
+                if(currentTextPosition >= currentText.size() || strchr(spaces, currentText[currentTextPosition])) {
                     break;
                 }
             }
@@ -120,25 +121,25 @@ void TextInputHandler::onKeyPressed(KeyCode key, KeyAction action) {
         } else {
             currentTextPosition++;
             while(currentTextPosition < currentText.size() &&
-                (currentText[currentTextPosition] & 0b11000000) == 0b10000000)
+                  (currentText[currentTextPosition] & 0b11000000) == 0b10000000)
                 currentTextPosition++;
             currentTextPositionUTF++;
         }
     } else if(key == KeyCode::LEFT) {
         if(currentTextPosition <= 0)
             return;
-        if (altPressed) {
-            if (strchr(spaces, currentText[currentTextPosition - 1])) {
-                while (currentTextPosition > 0) {
+        if(altPressed) {
+            if(strchr(spaces, currentText[currentTextPosition - 1])) {
+                while(currentTextPosition > 0) {
                     currentTextPosition--;
-                    if (currentTextPosition < 1 || !strchr(spaces, currentText[currentTextPosition - 1])) {
+                    if(currentTextPosition < 1 || !strchr(spaces, currentText[currentTextPosition - 1])) {
                         break;
                     }
                 }
             }
-            while (currentTextPosition > 0) {
+            while(currentTextPosition > 0) {
                 currentTextPosition--;
-                if (currentTextPosition < 1 || strchr(spaces, currentText[currentTextPosition - 1])) {
+                if(currentTextPosition < 1 || strchr(spaces, currentText[currentTextPosition - 1])) {
                     break;
                 }
             }
@@ -155,7 +156,10 @@ void TextInputHandler::onKeyPressed(KeyCode key, KeyAction action) {
     } else if(key == KeyCode::END) {
         currentTextPosition = currentText.size();
         currentTextPositionUTF = UTF8Util::getLength(currentText.c_str(), currentTextPosition);
+    } else {
+        return;
     }
+    caretPositionCallback(getCursorPosition());
     if(!shiftPressed)
         currentTextCopyPosition = currentTextPosition;
 }
@@ -178,6 +182,7 @@ void TextInputHandler::setCursorPosition(int pos) {
         currentTextPositionUTF = pos;
         currentTextPosition = UTF8Util::getBytePosFromUTF(currentText.c_str(), currentText.size(), pos);
     }
+    caretPositionCallback(getCursorPosition());
 }
 
 void TextInputHandler::setKeepLastCharOnce() {

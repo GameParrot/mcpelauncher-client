@@ -41,7 +41,6 @@
 #include <filesystem>
 #endif
 
-
 void JniSupport::registerJniClasses() {
     vm.registerClass<File>();
     vm.registerClass<ClassLoader>();
@@ -121,7 +120,7 @@ void JniSupport::registerJniClasses() {
 }
 
 void JniSupport::registerMinecraftNatives(void *(*symResolver)(const char *)) {
-    registerNatives(MainActivity::getDescriptor(), {{"nativeRegisterThis", "()V"}, {"nativeWaitCrashManagementSetupComplete", "()V"}, {"nativeInitializeWithApplicationContext", "(Landroid/content/Context;)V"}, {"nativeShutdown", "()V"}, {"nativeUnregisterThis", "()V"}, {"nativeStopThis", "()V"}, {"nativeOnDestroy", "()V"}, {"nativeResize", "(II)V"}, {"nativeSetTextboxText", "(Ljava/lang/String;)V"}, {"nativeCaretPosition", "(I)V"}, { "nativeBackPressed", "()V"}, {"nativeReturnKeyPressed", "()V"}, {"nativeOnPickImageSuccess", "(JLjava/lang/String;)V"}, {"nativeOnPickImageCanceled", "(J)V"}, {"nativeOnPickFileSuccess", "(Ljava/lang/String;)V"}, {"nativeOnPickFileCanceled", "()V"}, {"nativeInitializeXboxLive", "(JJ)V"}, {"nativeinitializeLibHttpClient", "(J)J"}, {"nativeInitializeLibHttpClient", "(J)J"}, {"nativeProcessIntentUriQuery", "(Ljava/lang/String;Ljava/lang/String;)V"}, {"nativeSetIntegrityToken", "(Ljava/lang/String;)V"}, {"nativeRunNativeCallbackOnUiThread", "(J)V"}}, symResolver);
+    registerNatives(MainActivity::getDescriptor(), {{"nativeRegisterThis", "()V"}, {"nativeWaitCrashManagementSetupComplete", "()V"}, {"nativeInitializeWithApplicationContext", "(Landroid/content/Context;)V"}, {"nativeShutdown", "()V"}, {"nativeUnregisterThis", "()V"}, {"nativeStopThis", "()V"}, {"nativeOnDestroy", "()V"}, {"nativeResize", "(II)V"}, {"nativeSetTextboxText", "(Ljava/lang/String;)V"}, {"nativeCaretPosition", "(I)V"}, {"nativeBackPressed", "()V"}, {"nativeReturnKeyPressed", "()V"}, {"nativeOnPickImageSuccess", "(JLjava/lang/String;)V"}, {"nativeOnPickImageCanceled", "(J)V"}, {"nativeOnPickFileSuccess", "(Ljava/lang/String;)V"}, {"nativeOnPickFileCanceled", "()V"}, {"nativeInitializeXboxLive", "(JJ)V"}, {"nativeinitializeLibHttpClient", "(J)J"}, {"nativeInitializeLibHttpClient", "(J)J"}, {"nativeProcessIntentUriQuery", "(Ljava/lang/String;Ljava/lang/String;)V"}, {"nativeSetIntegrityToken", "(Ljava/lang/String;)V"}, {"nativeRunNativeCallbackOnUiThread", "(J)V"}}, symResolver);
     registerNatives(NetworkMonitor::getDescriptor(), {{"nativeUpdateNetworkStatus", "(ZZZ)V"}}, symResolver);
     registerNatives(NativeStoreListener::getDescriptor(), {
                                                               {"onStoreInitialized", "(JZ)V"},
@@ -150,38 +149,39 @@ void JniSupport::registerMinecraftNatives(void *(*symResolver)(const char *)) {
                                                          },
                     symResolver);
     registerNatives(NetworkObserver::getDescriptor(), {
-                                                             {"Log", "(Ljava/lang/String;)V"},
-                                                         },
+                                                          {"Log", "(Ljava/lang/String;)V"},
+                                                      },
                     symResolver);
     registerNatives(PlayIntegrity::getDescriptor(), {
-                                                             {"nativePlayIntegrityComplete", "()V"},
-                                                         },
+                                                        {"nativePlayIntegrityComplete", "()V"},
+                                                    },
                     symResolver);
 }
 
-JniSupport::JniSupport() : textInput([this](std::string const &str) { return onSetTextboxText(str); })
+JniSupport::JniSupport() : textInput([this](std::string const &str) { return onSetTextboxText(str); }, [this](int pos) { return onCaretPosition(pos); })
 #if defined(__APPLE__) && defined(__aarch64__)
-    , vm([](Baron::Jvm *jvm) {
-        auto lib = linker::dlopen(PathHelper::findDataFile("lib/" + std::string(PathHelper::getAbiDir()) + "/libjnivmsupport.so").c_str(), 0);
-        if(lib == nullptr) {
-            Log::error("LAUNCHER", "Failed to load arm64 variadic compat libjnivmsupport.so Original Error: %s", linker::dlerror());
-            return;
-        }
-        void** GetJMethodIDSignature = (void**)linker::dlsym(lib, "GetJMethodIDSignature");
-        if(GetJMethodIDSignature == nullptr) {
-            Log::error("LAUNCHER", "Failed to get GetJMethodIDSignature Original Error: %s", linker::dlerror());
-            return;
-        }
-        *GetJMethodIDSignature = (void*)jnivm::GetJMethodIDSignature;
-        void(*PatchJNINativeInterface)(JNINativeInterface& interface) = (void(*)(JNINativeInterface& interface))linker::dlsym(lib, "PatchJNINativeInterface");
-        if(PatchJNINativeInterface == nullptr) {
-            Log::error("LAUNCHER", "Failed to get PatchJNINativeInterface Original Error: %s", linker::dlerror());
-            return;
-        }
-        jvm->AddHook([PatchJNINativeInterface](JNINativeInterface& in) {
-            PatchJNINativeInterface(in);
-        });
-    })
+                           ,
+                           vm([](Baron::Jvm *jvm) {
+                               auto lib = linker::dlopen(PathHelper::findDataFile("lib/" + std::string(PathHelper::getAbiDir()) + "/libjnivmsupport.so").c_str(), 0);
+                               if(lib == nullptr) {
+                                   Log::error("LAUNCHER", "Failed to load arm64 variadic compat libjnivmsupport.so Original Error: %s", linker::dlerror());
+                                   return;
+                               }
+                               void **GetJMethodIDSignature = (void **)linker::dlsym(lib, "GetJMethodIDSignature");
+                               if(GetJMethodIDSignature == nullptr) {
+                                   Log::error("LAUNCHER", "Failed to get GetJMethodIDSignature Original Error: %s", linker::dlerror());
+                                   return;
+                               }
+                               *GetJMethodIDSignature = (void *)jnivm::GetJMethodIDSignature;
+                               void (*PatchJNINativeInterface)(JNINativeInterface &interface) = (void (*)(JNINativeInterface &interface))linker::dlsym(lib, "PatchJNINativeInterface");
+                               if(PatchJNINativeInterface == nullptr) {
+                                   Log::error("LAUNCHER", "Failed to get PatchJNINativeInterface Original Error: %s", linker::dlerror());
+                                   return;
+                               }
+                               jvm->AddHook([PatchJNINativeInterface](JNINativeInterface &in) {
+                                   PatchJNINativeInterface(in);
+                               });
+                           })
 #endif
 {
     registerJniClasses();
@@ -211,7 +211,7 @@ void JniSupport::registerNatives(std::shared_ptr<FakeJni::JClass const> clazz,
         throw std::runtime_error("RegisterNatives failed");
 }
 
-void JniSupport::startGame(ANativeActivity_createFunc *activityOnCreate,
+void JniSupport::startGame(ANativeActivity_createFunc *activityOnCreate, GameActivity_createFunc *gameOnCreate,
                            void *stbiLoadFromMemory, void *stbiImageFree) {
     FakeJni::LocalFrame frame(vm);
 
@@ -231,28 +231,53 @@ void JniSupport::startGame(ANativeActivity_createFunc *activityOnCreate,
 
     XboxLiveHelper::getInstance().setJvm(&vm);
 
-    nativeActivity.callbacks = &nativeActivityCallbacks;
-    nativeActivity.vm = (JavaVM *)&vm;
-    nativeActivity.assetManager = (AAssetManager *)assetManager.get();
-    nativeActivity.env = (JNIEnv *)&frame.getJniEnv();
-    nativeActivity.internalDataPath = "/internal";
-    nativeActivity.externalDataPath = "/external";
-    nativeActivity.clazz = activityRef;
-    nativeActivity.sdkVersion = activity->getAndroidVersion();
+    isGameActivity = (activityOnCreate == nullptr);
 
-    Log::trace("JniSupport", "Invoking nativeRegisterThis\n");
-    auto registerThis = activity->getClass().getMethod("()V", "nativeRegisterThis");
-    if(registerThis)
-        registerThis->invoke(frame.getJniEnv(), activity.get());
+    if(activityOnCreate != nullptr) {
+        nativeActivity.callbacks = &nativeActivityCallbacks;
+        nativeActivity.vm = (JavaVM *)&vm;
+        nativeActivity.assetManager = (AAssetManager *)assetManager.get();
+        nativeActivity.env = (JNIEnv *)&frame.getJniEnv();
+        nativeActivity.internalDataPath = "/internal";
+        nativeActivity.externalDataPath = "/external";
+        nativeActivity.clazz = activityRef;
+        nativeActivity.sdkVersion = activity->getAndroidVersion();
 
-    Log::trace("JniSupport", "Invoking ANativeActivity_onCreate\n");
-    activityOnCreate(&nativeActivity, nullptr, 0);
+        Log::trace("JniSupport", "Invoking nativeRegisterThis\n");
+        auto registerThis = activity->getClass().getMethod("()V", "nativeRegisterThis");
+        if(registerThis)
+            registerThis->invoke(frame.getJniEnv(), activity.get());
 
-    Log::trace("JniSupport", "Invoking start activity callbacks\n");
-    nativeActivityCallbacks.onInputQueueCreated(&nativeActivity, inputQueue);
-    nativeActivityCallbacks.onStart(&nativeActivity);
-    nativeActivityCallbacks.onNativeWindowCreated(&nativeActivity, window);
-    // nativeActivityCallbacks.onResume(&nativeActivity);
+        Log::trace("JniSupport", "Invoking ANativeActivity_onCreate\n");
+        activityOnCreate(&nativeActivity, nullptr, 0);
+
+        Log::trace("JniSupport", "Invoking start activity callbacks\n");
+        nativeActivityCallbacks.onInputQueueCreated(&nativeActivity, inputQueue);
+        nativeActivityCallbacks.onStart(&nativeActivity);
+        nativeActivityCallbacks.onNativeWindowCreated(&nativeActivity, window);
+        // nativeActivityCallbacks.onResume(&nativeActivity);
+    } else {
+        gameActivity.callbacks = &gameActivityCallbacks;
+        gameActivity.vm = (JavaVM *)&vm;
+        gameActivity.assetManager = (AAssetManager *)assetManager.get();
+        gameActivity.env = (JNIEnv *)&frame.getJniEnv();
+        gameActivity.internalDataPath = "/internal";
+        gameActivity.externalDataPath = "/external";
+        gameActivity.javaGameActivity = activityRef;
+        gameActivity.sdkVersion = activity->getAndroidVersion();
+
+        Log::trace("JniSupport", "Invoking nativeRegisterThis\n");
+        auto registerThis = activity->getClass().getMethod("()V", "nativeRegisterThis");
+        if(registerThis)
+            registerThis->invoke(frame.getJniEnv(), activity.get());
+
+        Log::trace("JniSupport", "Invoking GameActivity_onCreate\n");
+        gameOnCreate(&gameActivity, nullptr, 0);
+
+        Log::trace("JniSupport", "Invoking start activity callbacks\n");
+        gameActivityCallbacks.onStart(&gameActivity);
+        gameActivityCallbacks.onNativeWindowCreated(&gameActivity, window);
+    }
 
     std::shared_ptr<NetworkMonitor> network;
     network = std::make_shared<NetworkMonitor>();
@@ -260,35 +285,34 @@ void JniSupport::startGame(ANativeActivity_createFunc *activityOnCreate,
     if(updateNetworkStatus)
         updateNetworkStatus->invoke(frame.getJniEnv(), network.get(), true, true, true);
 
-    if (!options.importFilePath.empty()) {
+    if(!options.importFilePath.empty()) {
         importFile(options.importFilePath);
     }
-    if (!options.sendUri.empty()) {
+    if(!options.sendUri.empty()) {
         sendUri(options.sendUri);
     }
-    if (options.useStdinImport) {
+    if(options.useStdinImport) {
         std::thread([=]() {
-            for (std::string line; std::getline(std::cin, line);) {
+            for(std::string line; std::getline(std::cin, line);) {
                 struct stat buffer;
-                if (line.rfind("minecraft://", 0) == 0) {
+                if(line.rfind("minecraft://", 0) == 0) {
                     sendUri(line);
-                } else if ((stat (line.c_str(), &buffer) == 0)) {
+                } else if((stat(line.c_str(), &buffer) == 0)) {
                     importFile(line);
                 }
             }
         }).detach();
     }
-
 }
 
 static std::string urlDecode(const std::string &encoded) {
     std::ostringstream decoded;
-    for(size_t i=0; i < encoded.length(); ++i) {
+    for(size_t i = 0; i < encoded.length(); ++i) {
         if(encoded.at(i) == '%' && i + 2 < encoded.length()) {
-            std::istringstream in(encoded.substr(i+1, 2));
+            std::istringstream in(encoded.substr(i + 1, 2));
             short c;
             in >> std::hex >> c;
-            decoded << (char&)c;
+            decoded << (char &)c;
             i += 2;
         } else {
             decoded << encoded.at(i);
@@ -298,7 +322,7 @@ static std::string urlDecode(const std::string &encoded) {
 }
 
 void JniSupport::sendUri(std::string uri) {
-    if (uri.find("minecraft://") != std::string::npos) {
+    if(uri.find("minecraft://") != std::string::npos) {
         FakeJni::LocalFrame frame(vm);
 
         std::string host = "";
@@ -306,19 +330,19 @@ void JniSupport::sendUri(std::string uri) {
 
         std::regex host_regex(R"(minecraft?:\/\/([^\/?#:]+))");
         std::smatch host_match;
-        if (std::regex_search(uri, host_match, host_regex)) {
+        if(std::regex_search(uri, host_match, host_regex)) {
             host = host_match[1].str();
         }
 
         std::regex query_regex(R"(\?([^#]+))");
         std::smatch query_match;
-        if (std::regex_search(uri, query_match, query_regex)) {
+        if(std::regex_search(uri, query_match, query_regex)) {
             // This is lossy, but the native code has this interface without proper escaping support
             query = urlDecode(query_match[1].str());
         }
 
         auto urlLaunch = activity->getClass().getMethod("(Ljava/lang/String;Ljava/lang/String;)V", "nativeProcessIntentUriQuery");
-        urlLaunch->invoke(frame.getJniEnv(), activity.get(), std::make_shared<FakeJni::JString>(host.c_str()), std::make_shared<FakeJni::JString>(query.c_str())); // The game expects it to be parsed using the java getHost() and getQuery() methods
+        urlLaunch->invoke(frame.getJniEnv(), activity.get(), std::make_shared<FakeJni::JString>(host.c_str()), std::make_shared<FakeJni::JString>(query.c_str()));  // The game expects it to be parsed using the java getHost() and getQuery() methods
     } else {
         Log::warn("JniSupport", "Not sending URI %s, not a valid Minecraft URI", uri.c_str());
     }
@@ -331,21 +355,21 @@ void JniSupport::importFile(std::string path) {
     std::string tmpDir = "/tmp";
 #endif
     std::string fileExt = path.substr(path.find_last_of(".") + 1);
-    if (fileExt == "mcworld" || fileExt == "mcpack" || fileExt == "mcaddon" || fileExt == "mctemplate") {
+    if(fileExt == "mcworld" || fileExt == "mcpack" || fileExt == "mcaddon" || fileExt == "mctemplate") {
         FakeJni::LocalFrame frame(vm);
         try {
             std::string fileName = path.substr(path.find_last_of("/") + 1);
-            if (path.find("&") == std::string::npos) {
+            if(path.find("&") == std::string::npos) {
                 std::ifstream src(path, std::ios::binary);
                 std::ofstream dest(tmpDir + "/" + fileName, std::ios::binary);
-                dest << src.rdbuf(); // We have to copy it to the temp folder because the game will delete the archive if importing succeeds.
+                dest << src.rdbuf();  // We have to copy it to the temp folder because the game will delete the archive if importing succeeds.
 
                 auto fileOpen = activity->getClass().getMethod("(Ljava/lang/String;Ljava/lang/String;)V", "nativeProcessIntentUriQuery");
                 fileOpen->invoke(frame.getJniEnv(), activity.get(), std::make_shared<FakeJni::JString>("contentIntent"), std::make_shared<FakeJni::JString>(path + "&" + tmpDir + "/" + fileName));
             } else {
                 Log::warn("JniSupport", "Not importing file at %s; file path cannot contain &", path.c_str());
             }
-        } catch (std::exception& e) {
+        } catch(std::exception &e) {
             Log::error("JniSupport", "Failed to import file at %s: %s", path.c_str(), e.what());
         }
     } else {
@@ -358,15 +382,24 @@ void JniSupport::stopGame() {
 
     Log::trace("JniSupport", "Invoking stop activity callbacks\n");
     auto nativeStopThis = activity->getClass().getMethod("()V", "nativeStopThis");
-    nativeStopThis->invoke(frame.getJniEnv(), activity.get());
+    if(nativeStopThis)
+        nativeStopThis->invoke(frame.getJniEnv(), activity.get());
     auto nativeUnregisterThis = activity->getClass().getMethod("()V", "nativeUnregisterThis");
     if(nativeUnregisterThis)
         nativeUnregisterThis->invoke(frame.getJniEnv(), activity.get());
     auto nativeOnDestroy = activity->getClass().getMethod("()V", "nativeOnDestroy");
-    nativeOnDestroy->invoke(frame.getJniEnv(), activity.get());
-    nativeActivityCallbacks.onPause(&nativeActivity);
-    nativeActivityCallbacks.onStop(&nativeActivity);
-    nativeActivityCallbacks.onDestroy(&nativeActivity);
+    if(nativeOnDestroy)
+        nativeOnDestroy->invoke(frame.getJniEnv(), activity.get());
+
+    if(isGameActivity) {
+        gameActivityCallbacks.onPause(&gameActivity);
+        gameActivityCallbacks.onStop(&gameActivity);
+        gameActivityCallbacks.onDestroy(&gameActivity);
+    } else {
+        nativeActivityCallbacks.onPause(&nativeActivity);
+        nativeActivityCallbacks.onStop(&nativeActivity);
+        nativeActivityCallbacks.onDestroy(&nativeActivity);
+    }
 
     Log::trace("JniSupport", "Waiting for looper clean up\n");
     std::unique_lock<std::mutex> lock(gameExitMutex);
@@ -435,6 +468,13 @@ void JniSupport::setLastChar(FakeJni::JInt sym) {
     activity->setLastChar(sym);
 }
 
+void JniSupport::onCaretPosition(int pos) {
+    auto method = activity->getClass().getMethod("(I)V", "nativeCaretPosition");
+    if(method) {
+        FakeJni::LocalFrame frame;
+        method->invoke(frame.getJniEnv(), activity.get(), pos);
+    }
+}
 
 void JniSupport::onReturnKeyPressed() {
     FakeJni::LocalFrame frame(vm);

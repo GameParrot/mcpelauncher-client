@@ -160,18 +160,35 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
             }
         }
 #endif
+        if(options.emulateTouch) {
+            if(jniSupport.isGameActivityVersion()) {
+                sendTouchEvent(0, action == MouseButtonAction::PRESS ? AMOTION_EVENT_ACTION_DOWN : AMOTION_EVENT_ACTION_UP, x, y - Settings::menubarsize);
+            } else {
+                inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, action == MouseButtonAction::PRESS ? AMOTION_EVENT_ACTION_DOWN : AMOTION_EVENT_ACTION_UP, 0, x, y - Settings::menubarsize));
+            }
+            return;
+        }
         if(btn > 3) {
             // Seems to get recognized same as regular Mousebuttons as Button4 or higher, but ignored from mouse
             return onKeyboard((KeyCode)btn, action == MouseButtonAction::PRESS ? KeyAction::PRESS : KeyAction::RELEASE);
         }
         if(useDirectMouseInput)
-            Mouse::feed((char)btn, (char)(action == MouseButtonAction::PRESS ? 1 : 0), (short)x, (short)y, 0, 0);
-        else if(action == MouseButtonAction::PRESS) {
-            buttonState |= mapMouseButtonToAndroid(btn);
-            inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_BUTTON_PRESS, 0, x, y - Settings::menubarsize, buttonState, 0));
-        } else if(action == MouseButtonAction::RELEASE) {
-            buttonState = buttonState & ~mapMouseButtonToAndroid(btn);
-            inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_BUTTON_RELEASE, 0, x, y - Settings::menubarsize, buttonState, 0));
+            Mouse::feed((char)btn, (char)(action == MouseButtonAction::PRESS ? 1 : 0), (short)x, (short)(y - Settings::menubarsize), 0, 0);
+        else if(!jniSupport.isGameActivityVersion()) {
+            if(action == MouseButtonAction::PRESS) {
+                buttonState |= mapMouseButtonToAndroid(btn);
+                inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_BUTTON_PRESS, 0, x, y - Settings::menubarsize, buttonState, 0));
+            } else if(action == MouseButtonAction::RELEASE) {
+                buttonState = buttonState & ~mapMouseButtonToAndroid(btn);
+                inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_BUTTON_RELEASE, 0, x, y - Settings::menubarsize, buttonState, 0));
+            }
+        } else {
+            if(action == MouseButtonAction::PRESS) {
+                buttonState |= mapMouseButtonToAndroid(btn);
+            } else {
+                buttonState = buttonState & ~mapMouseButtonToAndroid(btn);
+            }
+            sendMouseEvent(AINPUT_SOURCE_MOUSE, 0, (action == MouseButtonAction::PRESS) ? AMOTION_EVENT_ACTION_BUTTON_PRESS : AMOTION_EVENT_ACTION_BUTTON_RELEASE, buttonState, x, y - Settings::menubarsize, 0);
         }
     }
 }
@@ -196,9 +213,19 @@ void WindowCallbacks::onMousePosition(double x, double y) {
             }
         }
 #endif
+        if(options.emulateTouch) {
+            if(jniSupport.isGameActivityVersion()) {
+                sendTouchEvent(0, AMOTION_EVENT_ACTION_MOVE, x, y - Settings::menubarsize);
+            } else {
+                inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_MOVE, 0, x, y - Settings::menubarsize));
+            }
+            return;
+        }
         if(useDirectMouseInput)
-            Mouse::feed(0, 0, (short)x, (short)y, 0, 0);
-        else
+            Mouse::feed(0, 0, (short)x, (short)(y - Settings::menubarsize), 0, 0);
+        else if(jniSupport.isGameActivityVersion()) {
+            sendMouseEvent(AINPUT_SOURCE_MOUSE, 0, AMOTION_EVENT_ACTION_HOVER_MOVE, buttonState, x, y - Settings::menubarsize, 0);
+        } else
             inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_HOVER_MOVE, 0, x, y - Settings::menubarsize, buttonState, 0));
     }
 }
@@ -215,7 +242,10 @@ void WindowCallbacks::onMouseRelativePosition(double x, double y) {
         }
         if(useDirectMouseInput)
             Mouse::feed(0, 0, 0, 0, (short)x, (short)y);
-        else
+        else if(jniSupport.isGameActivityVersion()) {
+            GameActivityMotionEvent event = {};
+            sendMouseEvent(AINPUT_SOURCE_MOUSE_RELATIVE, 0, AMOTION_EVENT_ACTION_HOVER_MOVE, buttonState, x, y, 0);
+        } else
             inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE_RELATIVE, AMOTION_EVENT_ACTION_HOVER_MOVE, 0, x, y, buttonState, 0));
     }
 }
@@ -247,10 +277,31 @@ void WindowCallbacks::onMouseScroll(double x, double y, double dx, double dy) {
 #endif
         if(useDirectMouseInput)
             Mouse::feed(4, (char&)cdy, 0, 0, (short)x, (short)y - Settings::menubarsize);
+        else if(jniSupport.isGameActivityVersion())
+            sendMouseEvent(AINPUT_SOURCE_MOUSE, 0, AMOTION_EVENT_ACTION_SCROLL, buttonState, x, y - Settings::menubarsize, cdy);
         else
             inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_MOUSE, AMOTION_EVENT_ACTION_SCROLL, 0, x, y - Settings::menubarsize, buttonState, cdy));
     }
 }
+
+void WindowCallbacks::sendMouseEvent(int32_t source, int32_t deviceId, int32_t action, int32_t buttonState, float x, float y, float scrollY) {
+    GameActivityMotionEvent event = {};
+    event.source = source;
+    event.deviceId = deviceId;
+    event.action = action;
+    event.buttonState = buttonState;
+    event.precisionX = x;
+    event.precisionY = y;
+    event.pointerCount = 2;
+    event.pointers[0].axisValues[AMOTION_EVENT_AXIS_X] = x;
+    event.pointers[0].axisValues[AMOTION_EVENT_AXIS_Y] = y;
+    event.pointers[0].rawX = x;
+    event.pointers[0].rawY = x;
+    event.pointers[0].axisValues[AMOTION_EVENT_AXIS_VSCROLL] = scrollY;
+
+    jniSupport.sendMotionEvent(&event);
+}
+
 void WindowCallbacks::onTouchStart(int id, double x, double y) {
     if(hasInputMode(InputMode::Touch)) {
 #ifdef USE_IMGUI
@@ -265,7 +316,11 @@ void WindowCallbacks::onTouchStart(int id, double x, double y) {
             }
         }
 #endif
-        inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_DOWN, id, x, y - Settings::menubarsize));
+        if(jniSupport.isGameActivityVersion()) {
+            sendTouchEvent(id, AMOTION_EVENT_ACTION_DOWN, x, y - Settings::menubarsize);
+        } else {
+            inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_DOWN, id, x, y - Settings::menubarsize));
+        }
     }
 }
 void WindowCallbacks::onTouchUpdate(int id, double x, double y) {
@@ -278,7 +333,11 @@ void WindowCallbacks::onTouchUpdate(int id, double x, double y) {
             return;
         }
 #endif
-        inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_MOVE, id, x, y - Settings::menubarsize));
+        if(jniSupport.isGameActivityVersion()) {
+            sendTouchEvent(id, AMOTION_EVENT_ACTION_MOVE, x, y - Settings::menubarsize);
+        } else {
+            inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_MOVE, id, x, y - Settings::menubarsize));
+        }
     }
 }
 void WindowCallbacks::onTouchEnd(int id, double x, double y) {
@@ -293,9 +352,28 @@ void WindowCallbacks::onTouchEnd(int id, double x, double y) {
             return;
         }
 #endif
-        inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_UP, id, x, y - Settings::menubarsize));
+        if(jniSupport.isGameActivityVersion()) {
+            sendTouchEvent(id, AMOTION_EVENT_ACTION_UP, x, y - Settings::menubarsize);
+        } else {
+            inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_TOUCHSCREEN, AMOTION_EVENT_ACTION_UP, id, x, y - Settings::menubarsize));
+        }
     }
 }
+
+void WindowCallbacks::sendTouchEvent(int32_t pointerId, int32_t action, float x, float y) {
+    GameActivityMotionEvent ev = {};
+    ev.source = AINPUT_SOURCE_TOUCHSCREEN;
+    ev.action = action;
+    ev.pointerCount = 1;
+    ev.deviceId = 0;
+    ev.pointers[0].id = pointerId;
+    ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_X] = x;
+    ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_Y] = y;
+    ev.pointers[0].rawX = x;
+    ev.pointers[0].rawY = y;
+    jniSupport.sendMotionEvent(&ev);
+}
+
 static bool deadKey(KeyCode key) {
     switch(WindowCallbacks::mapMinecraftToAndroidKey(key)) {
     case AKEYCODE_DEL:
@@ -571,10 +649,23 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
             }
         }
 
-        if(action == KeyAction::PRESS)
-            inputQueue.addEvent(FakeKeyEvent(AKEY_EVENT_ACTION_DOWN, mapMinecraftToAndroidKey(key), this->metaState));
-        else if(action == KeyAction::RELEASE)
-            inputQueue.addEvent(FakeKeyEvent(AKEY_EVENT_ACTION_UP, mapMinecraftToAndroidKey(key), this->metaState));
+        if(jniSupport.isGameActivityVersion()) {
+            GameActivityKeyEvent event = {};
+            event.deviceId = 0;
+            event.source = AINPUT_SOURCE_KEYBOARD;
+            event.action = (action == KeyAction::PRESS) ? AKEY_EVENT_ACTION_DOWN : AKEY_EVENT_ACTION_UP;
+            event.metaState = state;
+            event.keyCode = mapMinecraftToAndroidKey(key);
+            if(action == KeyAction::PRESS)
+                jniSupport.sendKeyDown(&event);
+            else if(action == KeyAction::RELEASE)
+                jniSupport.sendKeyUp(&event);
+        } else {
+            if(action == KeyAction::PRESS)
+                inputQueue.addEvent(FakeKeyEvent(AKEY_EVENT_ACTION_DOWN, mapMinecraftToAndroidKey(key), state));
+            else if(action == KeyAction::RELEASE)
+                inputQueue.addEvent(FakeKeyEvent(AKEY_EVENT_ACTION_UP, mapMinecraftToAndroidKey(key), state));
+        }
     }
 }
 void WindowCallbacks::onKeyboardText(std::string const& c) {
@@ -592,7 +683,7 @@ void WindowCallbacks::onKeyboardText(std::string const& c) {
     else
         jniSupport.getTextInputHandler().onTextInput(c);
 }
-void WindowCallbacks::onDrop(std::string const &path) {
+void WindowCallbacks::onDrop(std::string const& path) {
     jniSupport.importFile(path);
 }
 void WindowCallbacks::onPaste(std::string const& str) {
@@ -619,40 +710,76 @@ void WindowCallbacks::onGamepadState(int gamepad, bool connected) {
 void WindowCallbacks::queueGamepadAxisInputIfNeeded(int gamepad) {
     if(!needsQueueGamepadInput)
         return;
-    inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_GAMEPAD, gamepad, AMOTION_EVENT_ACTION_MOVE, 0, 0.f, 0.f,
-                                        [this, gamepad](int axis) {
-                                            auto gpi = gamepads.find(gamepad);
-                                            if(gpi == gamepads.end())
+    if(jniSupport.isGameActivityVersion()) {
+        auto gpi = gamepads.find(gamepad);
+        if(gpi == gamepads.end())
+            return;
+        auto& gp = gpi->second;
+
+        GameActivityMotionEvent ev = {};
+        ev.source = AINPUT_SOURCE_GAMEPAD;
+        ev.deviceId = gamepad;
+        ev.action = AMOTION_EVENT_ACTION_MOVE;
+        ev.pointerCount = 1;
+        ev.pointers[0].id = 0;
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_X] = gp.axis[(int)GamepadAxisId::LEFT_X];
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_Y] = gp.axis[(int)GamepadAxisId::LEFT_Y];
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_RX] = gp.axis[(int)GamepadAxisId::RIGHT_X];
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_RY] = gp.axis[(int)GamepadAxisId::RIGHT_Y];
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_BRAKE] = gp.axis[(int)GamepadAxisId::LEFT_TRIGGER];
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_GAS] = gp.axis[(int)GamepadAxisId::RIGHT_TRIGGER];
+
+        float hatX = 0;
+        if(gp.button[(int)GamepadButtonId::DPAD_LEFT])
+            hatX = -1.f;
+        if(gp.button[(int)GamepadButtonId::DPAD_RIGHT])
+            hatX = 1.f;
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_HAT_X] = hatX;
+
+        float hatY = 0;
+        if(gp.button[(int)GamepadButtonId::DPAD_UP])
+            hatY = -1.f;
+        if(gp.button[(int)GamepadButtonId::DPAD_DOWN])
+            hatY = 1.f;
+        ev.pointers[0].axisValues[AMOTION_EVENT_AXIS_HAT_Y] = hatY;
+
+        jniSupport.sendMotionEvent(&ev);
+    } else {
+        inputQueue.addEvent(FakeMotionEvent(AINPUT_SOURCE_GAMEPAD, gamepad, AMOTION_EVENT_ACTION_MOVE, 0, 0.f, 0.f,
+                                            [this, gamepad](int axis) {
+                                                auto gpi = gamepads.find(gamepad);
+                                                if(gpi == gamepads.end())
+                                                    return 0.f;
+                                                auto& gp = gpi->second;
+                                                if(axis == AMOTION_EVENT_AXIS_X)
+                                                    return gp.axis[(int)GamepadAxisId::LEFT_X];
+                                                if(axis == AMOTION_EVENT_AXIS_Y)
+                                                    return gp.axis[(int)GamepadAxisId::LEFT_Y];
+                                                if(axis == AMOTION_EVENT_AXIS_RX)
+                                                    return gp.axis[(int)GamepadAxisId::RIGHT_X];
+                                                if(axis == AMOTION_EVENT_AXIS_RY)
+                                                    return gp.axis[(int)GamepadAxisId::RIGHT_Y];
+                                                if(axis == AMOTION_EVENT_AXIS_BRAKE)
+                                                    return gp.axis[(int)GamepadAxisId::LEFT_TRIGGER];
+                                                if(axis == AMOTION_EVENT_AXIS_GAS)
+                                                    return gp.axis[(int)GamepadAxisId::RIGHT_TRIGGER];
+                                                if(axis == AMOTION_EVENT_AXIS_HAT_X) {
+                                                    if(gp.button[(int)GamepadButtonId::DPAD_LEFT])
+                                                        return -1.f;
+                                                    if(gp.button[(int)GamepadButtonId::DPAD_RIGHT])
+                                                        return 1.f;
+                                                    return 0.f;
+                                                }
+                                                if(axis == AMOTION_EVENT_AXIS_HAT_Y) {
+                                                    if(gp.button[(int)GamepadButtonId::DPAD_UP])
+                                                        return -1.f;
+                                                    if(gp.button[(int)GamepadButtonId::DPAD_DOWN])
+                                                        return 1.f;
+                                                    return 0.f;
+                                                }
                                                 return 0.f;
-                                            auto& gp = gpi->second;
-                                            if(axis == AMOTION_EVENT_AXIS_X)
-                                                return gp.axis[(int)GamepadAxisId::LEFT_X];
-                                            if(axis == AMOTION_EVENT_AXIS_Y)
-                                                return gp.axis[(int)GamepadAxisId::LEFT_Y];
-                                            if(axis == AMOTION_EVENT_AXIS_RX)
-                                                return gp.axis[(int)GamepadAxisId::RIGHT_X];
-                                            if(axis == AMOTION_EVENT_AXIS_RY)
-                                                return gp.axis[(int)GamepadAxisId::RIGHT_Y];
-                                            if(axis == AMOTION_EVENT_AXIS_BRAKE)
-                                                return gp.axis[(int)GamepadAxisId::LEFT_TRIGGER];
-                                            if(axis == AMOTION_EVENT_AXIS_GAS)
-                                                return gp.axis[(int)GamepadAxisId::RIGHT_TRIGGER];
-                                            if(axis == AMOTION_EVENT_AXIS_HAT_X) {
-                                                if(gp.button[(int)GamepadButtonId::DPAD_LEFT])
-                                                    return -1.f;
-                                                if(gp.button[(int)GamepadButtonId::DPAD_RIGHT])
-                                                    return 1.f;
-                                                return 0.f;
-                                            }
-                                            if(axis == AMOTION_EVENT_AXIS_HAT_Y) {
-                                                if(gp.button[(int)GamepadButtonId::DPAD_UP])
-                                                    return -1.f;
-                                                if(gp.button[(int)GamepadButtonId::DPAD_DOWN])
-                                                    return 1.f;
-                                                return 0.f;
-                                            }
-                                            return 0.f;
-                                        }));
+                                            }));
+    }
     needsQueueGamepadInput = false;
 }
 
@@ -673,10 +800,22 @@ void WindowCallbacks::onGamepadButton(int gamepad, GamepadButtonId btn, bool pre
             return;
         }
 
-        if(pressed)
-            inputQueue.addEvent(FakeKeyEvent(AINPUT_SOURCE_GAMEPAD, gamepad, AKEY_EVENT_ACTION_DOWN, mapGamepadToAndroidKey(btn)));
-        else
-            inputQueue.addEvent(FakeKeyEvent(AINPUT_SOURCE_GAMEPAD, gamepad, AKEY_EVENT_ACTION_UP, mapGamepadToAndroidKey(btn)));
+        if(jniSupport.isGameActivityVersion()) {
+            GameActivityKeyEvent event = {};
+            event.deviceId = gamepad;
+            event.source = AINPUT_SOURCE_GAMEPAD;
+            event.action = pressed ? AKEY_EVENT_ACTION_DOWN : AKEY_EVENT_ACTION_UP;
+            event.keyCode = mapGamepadToAndroidKey(btn);
+            if(pressed)
+                jniSupport.sendKeyDown(&event);
+            else
+                jniSupport.sendKeyUp(&event);
+        } else {
+            if(pressed)
+                inputQueue.addEvent(FakeKeyEvent(AINPUT_SOURCE_GAMEPAD, gamepad, AKEY_EVENT_ACTION_DOWN, mapGamepadToAndroidKey(btn)));
+            else
+                inputQueue.addEvent(FakeKeyEvent(AINPUT_SOURCE_GAMEPAD, gamepad, AKEY_EVENT_ACTION_UP, mapGamepadToAndroidKey(btn)));
+        }
     }
 }
 

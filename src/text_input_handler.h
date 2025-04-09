@@ -9,6 +9,7 @@
 struct TextInputHandler {
 public:
     using TextCallback = std::function<void(std::string)>;
+    using CaretCallback = std::function<void(int)>;
 
 private:
     bool enabled = false, multiline = false, shiftPressed = false, altPressed = false;
@@ -17,13 +18,17 @@ private:
     size_t currentTextPositionUTF = 0;
     size_t currentTextCopyPosition = 0;
     TextCallback textUpdateCallback;
+    CaretCallback caretPositionCallback;
     constexpr static char spaces[] = " -_#/\\!@$%^&*();:'\"?.,";
     size_t enabledNo = 0;
     std::string lastInput;
     bool keepOnce = false;
 
 public:
-    explicit TextInputHandler(TextCallback cb) : textUpdateCallback(std::move(cb)) {}
+    TextInputHandler(TextCallback cb, CaretCallback caretCb) {
+        textUpdateCallback = std::move(cb);
+        caretPositionCallback = std::move(caretCb);
+    }
 
     bool isEnabled() const { return enabled; }
 

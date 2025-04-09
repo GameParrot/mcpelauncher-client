@@ -5,6 +5,7 @@
 #include "../fake_assetmanager.h"
 #include <baron/baron.h>
 #include <android/native_activity.h>
+#include <android/game_activity.h>
 #include <game_window.h>
 #include <condition_variable>
 #include <mutex>
@@ -17,9 +18,13 @@ private:
         const char *sig;
     };
 
+    bool isGameActivity;
+
     Baron::Jvm vm;
     ANativeActivityCallbacks nativeActivityCallbacks;
+    GameActivityCallbacks gameActivityCallbacks;
     ANativeActivity nativeActivity;
+    GameActivity gameActivity;
     std::shared_ptr<MainActivity> activity;
     jobject activityRef;
     std::unique_ptr<FakeAssetManager> assetManager;
@@ -40,7 +45,7 @@ public:
 
     void registerMinecraftNatives(void *(*symResolver)(const char *));
 
-    void startGame(ANativeActivity_createFunc *activityOnCreate,
+    void startGame(ANativeActivity_createFunc *activityOnCreate, GameActivity_createFunc *gameCreate,
                    void *stbiLoadFromMemory, void *stbiImageFree);
 
     void importFile(std::string path);
@@ -63,6 +68,8 @@ public:
 
     void onSetTextboxText(std::string const &text);
 
+    void onCaretPosition(int pos);
+
     void onReturnKeyPressed();
 
     void onBackPressed();
@@ -72,4 +79,20 @@ public:
     TextInputHandler &getTextInputHandler() { return textInput; }
 
     void setLastChar(FakeJni::JInt sym);
+
+    void sendKeyDown(const GameActivityKeyEvent *event) {
+        gameActivityCallbacks.onKeyDown(&gameActivity, event);
+    }
+
+    void sendKeyUp(const GameActivityKeyEvent *event) {
+        gameActivityCallbacks.onKeyUp(&gameActivity, event);
+    }
+
+    void sendMotionEvent(const GameActivityMotionEvent *event) {
+        gameActivityCallbacks.onTouchEvent(&gameActivity, event);
+    }
+
+    bool isGameActivityVersion() {
+        return isGameActivity;
+    }
 };

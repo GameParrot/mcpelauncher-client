@@ -53,6 +53,13 @@ void FakeLooper::initHybrisHooks(std::unordered_map<std::string, void *> &syms) 
     };
 }
 
+void FakeLooper::onGameActivityClose(GameActivity *native) {
+    FakeJni::JniEnvContext ctx(*(FakeJni::Jvm *)native->vm);
+    auto activity = std::dynamic_pointer_cast<MainActivity>(ctx.getJniEnv().resolveReference(native->javaGameActivity));
+    activity->quitCallback();
+}
+
+
 void FakeLooper::initializeWindow() {
     if(associatedWindow) {
         return;

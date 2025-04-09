@@ -76,6 +76,10 @@ private:
 
     void queueGamepadAxisInputIfNeeded(int gamepad);
 
+    void sendMouseEvent(int32_t source, int32_t deviceId, int32_t action, int32_t buttonState, float x, float y, float scrollY);
+
+    void sendTouchEvent(int32_t pointerId, int32_t action, float x, float y);
+
 public:
     WindowCallbacks(GameWindow &window, JniSupport &jniSupport, FakeInputQueue &inputQueue);
 

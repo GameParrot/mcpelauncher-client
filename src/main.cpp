@@ -45,12 +45,11 @@
 #include "imgui_ui.h"
 
 struct RpcCallbackServer : daemon_utils::auto_shutdown_service {
-
-    RpcCallbackServer(const std::string &path, JniSupport& support) : daemon_utils::auto_shutdown_service(path, daemon_utils::shutdown_policy::never) {
+    RpcCallbackServer(const std::string& path, JniSupport& support) : daemon_utils::auto_shutdown_service(path, daemon_utils::shutdown_policy::never) {
         add_handler_async("mcpelauncher-client/sendfile", [this, &support](simpleipc::connection& conn, std::string const& method, nlohmann::json const& data, result_handler const& cb) {
             std::vector<std::string> files = data;
             for(auto&& file : files) {
-                if (file.rfind("minecraft://", 0) == 0) {
+                if(file.rfind("minecraft://", 0) == 0) {
                     support.sendUri(file);
                 } else {
                     support.importFile(file);
@@ -72,10 +71,10 @@ int main(int argc, char* argv[]) {
     if(argc == 2 && argv[1][0] != '-') {
         Log::info("Sendfile", "sending file");
         simpleipc::client::service_client sc(PathHelper::getPrimaryDataDirectory() + "file_handler");
-        std::vector<std::string> files = { argv[1] };
+        std::vector<std::string> files = {argv[1]};
         static std::mutex mlock;
         mlock.lock();
-        auto call = simpleipc::client::rpc_call<int>(sc.rpc("mcpelauncher-client/sendfile", files), [](const nlohmann::json &res) {
+        auto call = simpleipc::client::rpc_call<int>(sc.rpc("mcpelauncher-client/sendfile", files), [](const nlohmann::json& res) {
             Log::info("Sendfile", "success");
             mlock.unlock();
             return 0;
@@ -97,10 +96,10 @@ int main(int argc, char* argv[]) {
     argparser::arg<std::string> sendUri(p, "--uri", "-u", "URI to send to the game");
     argparser::arg<std::string> v8Flags(p, "--v8-flags", "-v8f", "Flags to pass to the v8 engine of the game",
 #if defined(__APPLE__) && defined(__aarch64__)
-        // Due to problems with running JIT compiled code without using apple specfic workarounds, we just run javascript via jitless
-        "--jitless"
+                                        // Due to problems with running JIT compiled code without using apple specfic workarounds, we just run javascript via jitless
+                                        "--jitless"
 #else
-        ""
+                                        ""
 #endif
     );
     argparser::arg<bool> webrtcdebug(p, "--webrtc-debug", "-drtc", "Enable webrtc debug logging");
@@ -112,6 +111,7 @@ int main(int argc, char* argv[]) {
     argparser::arg<bool> stdinImpt(p, "--stdin-import", "-si", "Use stdin for file import", false);
     argparser::arg<bool> resetSettings(p, "--reset-settings", "-gs", "Save the default Settings", false);
     argparser::arg<bool> freeOnly(p, "--free-only", "-f", "Only allow starting free versions", false);
+    argparser::arg<bool> emulateTouch(p, "--emulate-touch", "-et", "Emulate touch with mouse", false);
     argparser::arg<std::string> mods(p, "--mods", "-m", "Additional directories to load mods from split by ','", "");
 
     if(!p.parse(argc, (const char**)argv))
@@ -126,6 +126,7 @@ int main(int argc, char* argv[]) {
     options.windowHeight = windowHeight;
     options.graphicsApi = forceEgl.get() ? GraphicsApi::OPENGL_ES2 : GraphicsApi::OPENGL;
     options.useStdinImport = stdinImpt;
+    options.emulateTouch = emulateTouch;
     std::vector<std::string> modDirs;
     for(size_t i = 0; i < mods.get().length();) {
         auto r = mods.get().find(',', i);
@@ -203,7 +204,7 @@ int main(int argc, char* argv[]) {
     FileUtil::mkdirRecursive(fakeproc);
     std::ofstream fake_cpuinfo(fakeproc + "/cpuinfo", std::ios::binary | std::ios::trunc);
     if(fake_cpuinfo.is_open()) {
-#if defined(__i386__) || defined(__x86_64__) 
+#if defined(__i386__) || defined(__x86_64__)
         fake_cpuinfo << R"(processor	: 0
 vendor_id	: GenuineIntel
 cpu family	: 6
@@ -272,9 +273,9 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     auto pid = getpid();
     shim::rewrite_filesystem_access = {
         // Minecraft 1.16.210 or older
-        { "/data/data/com.mojang.minecraftpe", PathHelper::getPrimaryDataDirectory() },
+        {"/data/data/com.mojang.minecraftpe", PathHelper::getPrimaryDataDirectory()},
         // Minecraft 1.16.210 or later, absolute path on linux (source build ubuntu 20.04)
-        { std::string("/data/data") + PathHelper::getParentDir(PathHelper::getAppDir()) + "/proc/" + std::to_string(pid) + "/cmdline", PathHelper::getPrimaryDataDirectory() }};
+        {std::string("/data/data") + PathHelper::getParentDir(PathHelper::getAppDir()) + "/proc/" + std::to_string(pid) + "/cmdline", PathHelper::getPrimaryDataDirectory()}};
     if(argc >= 1 && argv != nullptr && argv[0] != nullptr && argv[0][0] != '\0') {
         // Minecraft 1.16.210 or later, relative path on linux (source build ubuntu 20.04) or every path AppImage / flatpak
         shim::rewrite_filesystem_access.emplace_back(argv[0][0] == '/' ? std::string("/data/data") + argv[0] : std::string("/data/data/") + argv[0], PathHelper::getPrimaryDataDirectory());
@@ -374,12 +375,11 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     linker::load_library("libandroid.so", android_syms);
     CorePatches::loadGameWindowLibrary();
 
-
     linker::load_library("libmcpelauncher_menu.so", {
-        { "mcpelauncher_addmenu", (void*)mcpelauncher_addmenu },
-        { "mcpelauncher_show_window", (void*)mcpelauncher_show_window },
-        { "mcpelauncher_close_window", (void*)mcpelauncher_close_window },
-    });
+                                                        {"mcpelauncher_addmenu", (void*)mcpelauncher_addmenu},
+                                                        {"mcpelauncher_show_window", (void*)mcpelauncher_show_window},
+                                                        {"mcpelauncher_close_window", (void*)mcpelauncher_close_window},
+                                                    });
 
     ModLoader modLoader;
     if(!freeOnly.get()) {
@@ -390,7 +390,7 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     }
 
     Log::trace("Launcher", "Loading Minecraft library");
-    static void* handle = MinecraftUtils::loadMinecraftLib(reinterpret_cast<void*>(&CorePatches::showMousePointer), reinterpret_cast<void*>(&CorePatches::hideMousePointer), reinterpret_cast<void*>(&CorePatches::setFullscreen));
+    static void* handle = MinecraftUtils::loadMinecraftLib(reinterpret_cast<void*>(&CorePatches::showMousePointer), reinterpret_cast<void*>(&CorePatches::hideMousePointer), reinterpret_cast<void*>(&CorePatches::setFullscreen), reinterpret_cast<void*>(&FakeLooper::onGameActivityClose));
     if(!handle && options.graphicsApi == GraphicsApi::OPENGL) {
         // Old game version or renderdragon
         options.graphicsApi = GraphicsApi::OPENGL_ES2;
@@ -440,7 +440,7 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
 
     Log::info("Launcher", "Applying patches");
     if(v8Flags.get().size()) {
-        void (*V8SetFlagsFromString)(const char * str, int length);
+        void (*V8SetFlagsFromString)(const char* str, int length);
         V8SetFlagsFromString = (decltype(V8SetFlagsFromString))linker::dlsym(handle, "_ZN2v82V818SetFlagsFromStringEPKc");
         if(V8SetFlagsFromString) {
             Log::info("V8", "Applying v8-flags %s", v8Flags.get().data());
@@ -449,8 +449,7 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
             Log::warn("V8", "Couldn't apply v8-flags %s to the game", v8Flags.get().data());
         }
     }
-    if(webrtcdebug.get())
-    {
+    if(webrtcdebug.get()) {
         void (*LogToDebug)(int servity) = (decltype(LogToDebug))linker::dlsym(handle, "_ZN3rtc10LogMessage10LogToDebugENS_15LoggingSeverityE");
         if(LogToDebug) {
             LogToDebug(0);
@@ -464,7 +463,7 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     bool (*isAndroidChromebook)() = (decltype(isAndroidChromebook))linker::dlsym(handle, "Java_com_mojang_minecraftpe_MainActivity_isAndroidChromebook");
     bool (*isAndroidAmazon)() = (decltype(isAndroidAmazon))linker::dlsym(handle, "Java_com_mojang_minecraftpe_MainActivity_isAndroidAmazon");
     bool (*isEduMode)() = (decltype(isEduMode))linker::dlsym(handle, "Java_com_mojang_minecraftpe_MainActivity_isEduMode");
-    
+
     if(isAndroidTrial && isAndroidTrial()) {
         Log::info("Launcher", "Detected Trial build");
     }
@@ -481,7 +480,7 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
         Log::error("Launcher", "Something went wrong");
         return 1;
     }
-                
+
     SymbolsHelper::initSymbols(handle);
     CorePatches::install(handle);
 #ifdef __i386__
@@ -506,7 +505,7 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
         return linker::dlsym(handle, sym);
     });
     std::thread startThread([&support]() {
-        support.startGame((ANativeActivity_createFunc*)linker::dlsym(handle, "ANativeActivity_onCreate"),
+        support.startGame((ANativeActivity_createFunc*)linker::dlsym(handle, "ANativeActivity_onCreate"), (GameActivity_createFunc*)linker::dlsym(handle, "GameActivity_onCreate"),
                           linker::dlsym(handle, "stbi_load_from_memory"),
                           linker::dlsym(handle, "stbi_image_free"));
         linker::dlclose(handle);
@@ -564,7 +563,7 @@ void loadGameOptions() {
     properties::property<bool> fullKeyboard(properties, "ctrl_fullkeyboardgameplay", false);
 
     std::ifstream propertiesFile(PathHelper::getPrimaryDataDirectory() + "/games/com.mojang/minecraftpe/options.txt");
-    if (propertiesFile) {
+    if(propertiesFile) {
         properties.load(propertiesFile);
     }
 

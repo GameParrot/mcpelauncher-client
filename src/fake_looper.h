@@ -60,4 +60,6 @@ public:
     static void initWindow();
 
     static void initHybrisHooks(std::unordered_map<std::string, void *> &syms);
+
+    static void onGameActivityClose(GameActivity *native);
 };

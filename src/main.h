@@ -5,6 +5,7 @@
 struct LauncherOptions {
     int windowWidth, windowHeight;
     bool useStdinImport;
+    bool emulateTouch;
     GraphicsApi graphicsApi;
     std::string importFilePath;
     std::string sendUri;
