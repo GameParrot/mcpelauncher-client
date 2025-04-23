@@ -8,6 +8,7 @@ struct Settings {
     static std::string clipboard;
     static bool enable_keyboard_tab_patches_1_20_60;
     static bool enable_keyboard_autofocus_patches_1_20_60;
+    static bool enable_intel_sprint_strafe_patch;
     static bool enable_menubar;
 
     static int enable_fps_hud;

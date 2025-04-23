@@ -445,6 +445,12 @@ void ImGuiUIDrawFrame(GameWindow* window) {
                 Settings::enable_keyboard_autofocus_patches_1_20_60 ^= true;
                 Settings::save();
             }
+#ifdef __x86_64__
+            if(ImGui::MenuItem("Enable Sprint strafe patch for Intel CPUs (requires restart)", nullptr, Settings::enable_intel_sprint_strafe_patch)) {
+                Settings::enable_intel_sprint_strafe_patch ^= true;
+                Settings::save();
+            }
+#endif
             if(menuentrieslock.try_lock()) {
                 appendMenu(menuentries);
                 menuentrieslock.unlock();
