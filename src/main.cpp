@@ -13,6 +13,7 @@
 #include "xbox_live_helper.h"
 #include "shader_error_patch.h"
 #include "hbui_patch.h"
+#include "strafe_sprint_patch.h"
 #include "jni/jni_support.h"
 #include "jni/store.h"
 #if defined(__i386__) || defined(__x86_64__)
@@ -488,6 +489,11 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     HbuiPatch::install(handle);
     SplitscreenPatch::install(handle);
     ShaderErrorPatch::install(handle);
+
+#elif __x86_64__
+    if(Settings::enable_intel_sprint_strafe_patch) {
+        StrafeSprintPatch::install(handle);
+    }
 #endif
     if(options.graphicsApi == GraphicsApi::OPENGL) {
         try {
