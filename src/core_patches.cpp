@@ -7,9 +7,6 @@
 CorePatches::GameWindowHandle CorePatches::currentGameWindowHandle;
 std::vector<std::function<void()>> CorePatches::onWindowCreatedCallbacks;
 
-std::vector<CorePatches::MouseDisabledCallback> CorePatches::mouseDisabledCallbacks;
-std::mutex CorePatches::mouseDisabledCallbacksLock;
-
 void CorePatches::install(void* handle) {
     // void* ptr = linker::dlsym(handle, "_ZN3web4http6client7details35verify_cert_chain_platform_specificERN5boost4asio3ssl14verify_contextERKSs");
     // PatchUtils::patchCallInstruction(ptr, (void*) +[]() { return true; }, true);
@@ -28,13 +25,11 @@ void CorePatches::install(void* handle) {
 void CorePatches::showMousePointer() {
     currentGameWindowHandle.mouseLocked = false;
     currentGameWindowHandle.callbacks->setCursorLocked(false);
-    callMouseDisabledCallbacks(false);
 }
 
 void CorePatches::hideMousePointer() {
     currentGameWindowHandle.mouseLocked = true;
     currentGameWindowHandle.callbacks->setCursorLocked(true);
-    callMouseDisabledCallbacks(true);
 }
 
 bool CorePatches::isMouseLocked() {
