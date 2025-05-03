@@ -366,7 +366,13 @@ void JniSupport::importFile(std::string path) {
             std::string fileName = path.substr(path.find_last_of("/") + 1);
             if(path.find("&") == std::string::npos) {
                 std::ifstream src(path, std::ios::binary);
+                if(!src.is_open()) {
+                    throw std::runtime_error("Error opening file: " + path);
+                }
                 std::ofstream dest(tmpDir + "/" + fileName, std::ios::binary);
+                if(!dest.is_open()) {
+                    throw std::runtime_error("Error opening file: " + path);
+                }
                 dest << src.rdbuf();  // We have to copy it to the temp folder because the game will delete the archive if importing succeeds.
 
                 auto fileOpen = activity->getClass().getMethod("(Ljava/lang/String;Ljava/lang/String;)V", "nativeProcessIntentUriQuery");

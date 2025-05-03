@@ -55,6 +55,9 @@ struct RpcCallbackServer : daemon_utils::auto_shutdown_service {
             for(auto&& file : files) {
                 if(file.rfind("minecraft://", 0) == 0) {
                     support.sendUri(file);
+                } else if(file.find("file://") == 0) {  // flatpak sends files as a uri
+                    auto path = file.substr(7);
+                    support.importFile(path);
                 } else {
                     support.importFile(file);
                 }
