@@ -3,9 +3,11 @@
 #include <mcpelauncher/linker.h>
 #include "jni_support.h"
 #include "xbox_live.h"
+#include "fmod.h"
 #include "lib_http_client.h"
 #include "lib_http_client_websocket.h"
 #include "cert_manager.h"
+#include "asset_manager.h"
 #include "package_source.h"
 #include "../xbox_live_helper.h"
 #include "http_stub.h"
@@ -113,6 +115,9 @@ void JniSupport::registerJniClasses() {
     vm.registerClass<NotificationListenerService>();
 
     vm.registerClass<PlayIntegrity>();
+
+    vm.registerClass<FMOD>();
+    vm.registerClass<AssetManager>();
 
 #if defined(HAVE_PULSEAUDIO) || defined(HAVE_SDL3AUDIO)
     vm.registerClass<AudioDevice>();

@@ -5,6 +5,8 @@
 AudioDevice::AudioDevice() {
     s = nullptr;
     SDL_Init(SDL_INIT_AUDIO);
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_ICON_NAME, "mcpelauncher-ui-qt");
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, "Minecraft");
 }
 
 AudioDevice::~AudioDevice() {

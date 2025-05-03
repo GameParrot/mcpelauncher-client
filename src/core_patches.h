@@ -27,6 +27,8 @@ public:
 
     static bool isMouseLocked();
 
+    static void setPendingDelayedPaste();
+
     static void setFullscreen(void* t, bool fullscreen);
 
     static void setGameWindow(std::shared_ptr<GameWindow> gameWindow);

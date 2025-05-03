@@ -6,6 +6,7 @@
 #include "cert_manager.h"
 #include "package_source.h"
 #include "http_stub.h"
+#include "fmod.h"
 #ifdef HAVE_PULSEAUDIO
 #include "pulseaudio.h"
 #endif
@@ -155,25 +156,23 @@ BEGIN_NATIVE_DESCRIPTOR(StoreListener)
 END_NATIVE_DESCRIPTOR
 
 BEGIN_NATIVE_DESCRIPTOR(NativeStoreListener){Constructor<NativeStoreListener, JLong>{}},
-{FakeJni::Function<&NativeStoreListener::onPurchaseFailed>{}, "onPurchaseFailed", FakeJni::JMethodID::PUBLIC },
-{FakeJni::Function<&NativeStoreListener::onQueryProductsSuccess>{}, "onQueryProductsSuccess", FakeJni::JMethodID::PUBLIC },
-{FakeJni::Function<&NativeStoreListener::onQueryPurchasesSuccess>{}, "onQueryPurchasesSuccess", FakeJni::JMethodID::PUBLIC },
-END_NATIVE_DESCRIPTOR
+    {FakeJni::Function<&NativeStoreListener::onPurchaseFailed>{}, "onPurchaseFailed", FakeJni::JMethodID::PUBLIC},
+    {FakeJni::Function<&NativeStoreListener::onQueryProductsSuccess>{}, "onQueryProductsSuccess", FakeJni::JMethodID::PUBLIC},
+    {FakeJni::Function<&NativeStoreListener::onQueryPurchasesSuccess>{}, "onQueryPurchasesSuccess", FakeJni::JMethodID::PUBLIC},
+    END_NATIVE_DESCRIPTOR
 
-BEGIN_NATIVE_DESCRIPTOR(Purchase)
-{FakeJni::Field<&Purchase::mProductId>{}, "mProductId", FakeJni::JFieldID::PUBLIC },
-{FakeJni::Field<&Purchase::mReceipt>{}, "mReceipt", FakeJni::JFieldID::PUBLIC },
-{FakeJni::Field<&Purchase::mPurchaseActive>{}, "mPurchaseActive", FakeJni::JFieldID::PUBLIC },
-END_NATIVE_DESCRIPTOR
+    BEGIN_NATIVE_DESCRIPTOR(Purchase){FakeJni::Field<&Purchase::mProductId>{}, "mProductId", FakeJni::JFieldID::PUBLIC},
+    {FakeJni::Field<&Purchase::mReceipt>{}, "mReceipt", FakeJni::JFieldID::PUBLIC},
+    {FakeJni::Field<&Purchase::mPurchaseActive>{}, "mPurchaseActive", FakeJni::JFieldID::PUBLIC},
+    END_NATIVE_DESCRIPTOR
 
-BEGIN_NATIVE_DESCRIPTOR(Product)
-{FakeJni::Field<&Product::mId>{}, "mId", FakeJni::JFieldID::PUBLIC },
-{FakeJni::Field<&Product::mPrice>{}, "mPrice", FakeJni::JFieldID::PUBLIC },
-{FakeJni::Field<&Product::mCurrencyCode>{}, "mCurrencyCode", FakeJni::JFieldID::PUBLIC },
-{FakeJni::Field<&Product::mUnformattedPrice>{}, "mUnformattedPrice", FakeJni::JFieldID::PUBLIC },
-END_NATIVE_DESCRIPTOR
+    BEGIN_NATIVE_DESCRIPTOR(Product){FakeJni::Field<&Product::mId>{}, "mId", FakeJni::JFieldID::PUBLIC},
+    {FakeJni::Field<&Product::mPrice>{}, "mPrice", FakeJni::JFieldID::PUBLIC},
+    {FakeJni::Field<&Product::mCurrencyCode>{}, "mCurrencyCode", FakeJni::JFieldID::PUBLIC},
+    {FakeJni::Field<&Product::mUnformattedPrice>{}, "mUnformattedPrice", FakeJni::JFieldID::PUBLIC},
+    END_NATIVE_DESCRIPTOR
 
-BEGIN_NATIVE_DESCRIPTOR(NotificationListenerService){FakeJni::Function<&NotificationListenerService::getDeviceRegistrationToken>{}, "getDeviceRegistrationToken", FakeJni::JMethodID::PUBLIC | FakeJni::JMethodID::STATIC},
+    BEGIN_NATIVE_DESCRIPTOR(NotificationListenerService){FakeJni::Function<&NotificationListenerService::getDeviceRegistrationToken>{}, "getDeviceRegistrationToken", FakeJni::JMethodID::PUBLIC | FakeJni::JMethodID::STATIC},
     END_NATIVE_DESCRIPTOR
 
     BEGIN_NATIVE_DESCRIPTOR(Store){FakeJni::Function<&Store::receivedLicenseResponse>{}, "receivedLicenseResponse", FakeJni::JMethodID::PUBLIC},
@@ -235,7 +234,7 @@ BEGIN_NATIVE_DESCRIPTOR(NotificationListenerService){FakeJni::Function<&Notifica
     END_NATIVE_DESCRIPTOR
 
     BEGIN_NATIVE_DESCRIPTOR(HttpClientWebSocket){Constructor<HttpClientWebSocket, JLong>{}},
-    {FakeJni::Field<&HttpClientWebSocket::owner>{}, "owner", FakeJni::JFieldID::PUBLIC },
+    {FakeJni::Field<&HttpClientWebSocket::owner>{}, "owner", FakeJni::JFieldID::PUBLIC},
 
     {Function<&HttpClientWebSocket::connect>{}, "connect"},
     {Function<&HttpClientWebSocket::addHeader>{}, "addHeader"},
@@ -361,5 +360,13 @@ END_NATIVE_DESCRIPTOR
 BEGIN_NATIVE_DESCRIPTOR(Signature){Function<&Signature::initVerify>{}, "initVerify"},
     {Function<&Signature::verify>{}, "verify"},
     {Function<&Signature::getInstance>{}, "getInstance"},
-    END_NATIVE_DESCRIPTOR
+END_NATIVE_DESCRIPTOR
 
+BEGIN_NATIVE_DESCRIPTOR(FMOD){Function<&FMOD::checkInit>{}, "checkInit"},
+{Function<&FMOD::supportsAAudio>{}, "supportsAAudio"},
+{Function<&FMOD::supportsLowLatency>{}, "supportsLowLatency"},
+{Function<&FMOD::getAssetManager>{}, "getAssetManager"},
+END_NATIVE_DESCRIPTOR
+
+BEGIN_NATIVE_DESCRIPTOR(AssetManager)
+    END_NATIVE_DESCRIPTOR

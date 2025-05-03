@@ -8,7 +8,7 @@ std::optional<bool> Settings::enable_imgui = {};
 int Settings::menubarsize = 0;
 std::string Settings::clipboard;
 bool Settings::enable_keyboard_autofocus_patches_1_20_60 = false;
-bool Settings::enable_keyboard_tab_patches_1_20_60 = false;
+bool Settings::enable_keyboard_autofocus_paste_patches_1_20_60 = false;
 bool Settings::enable_intel_sprint_strafe_patch = false;
 bool Settings::enable_menubar = true;
 
@@ -39,8 +39,8 @@ bool GameOptions::fullKeyboard = false;
 
 static properties::property_list settings('=');
 static properties::property<std::string> enable_imgui(settings, "enable_imgui", "auto");
-static properties::property<bool> enable_keyboard_autofocus_patches_1_20_60(settings, "enable_keyboard_autofocus_patches_1_20_60", /* default if not defined*/ false);
-static properties::property<bool> enable_keyboard_tab_patches_1_20_60(settings, "enable_keyboard_tab_patches_1_20_60", /* default if not defined*/ false);
+static properties::property<bool> enable_keyboard_autofocus_patches_1_20_60(settings, "enable_keyboard_autofocus_patches_1_20_60", /* default if not defined*/ false);              // should be enabled on sdl3 builds by default
+static properties::property<bool> enable_keyboard_autofocus_paste_patches_1_20_60(settings, "enable_keyboard_autofocus_paste_patches_1_20_60", /* default if not defined*/ false);  // should be enabled on sdl3 builds by default
 static properties::property<bool> enable_intel_sprint_strafe_patch(settings, "enable_intel_sprint_strafe_patch", /* default if not defined*/ false);
 static properties::property<bool> enable_menubar(settings, "enable_menubar", /* default if not defined*/ true);
 
@@ -73,7 +73,7 @@ void Settings::load() {
         Settings::enable_imgui = dummy_enable_imgui.get();
     }
     Settings::enable_keyboard_autofocus_patches_1_20_60 = ::enable_keyboard_autofocus_patches_1_20_60.get();
-    Settings::enable_keyboard_tab_patches_1_20_60 = ::enable_keyboard_tab_patches_1_20_60.get();
+    Settings::enable_keyboard_autofocus_paste_patches_1_20_60 = ::enable_keyboard_autofocus_paste_patches_1_20_60.get();
     Settings::enable_intel_sprint_strafe_patch = ::enable_intel_sprint_strafe_patch.get();
     Settings::enable_menubar = ::enable_menubar.get();
 
@@ -98,7 +98,7 @@ void Settings::save() {
         ::enable_imgui.set("auto");
     }
     ::enable_keyboard_autofocus_patches_1_20_60.set(Settings::enable_keyboard_autofocus_patches_1_20_60);
-    ::enable_keyboard_tab_patches_1_20_60.set(Settings::enable_keyboard_tab_patches_1_20_60);
+    ::enable_keyboard_autofocus_paste_patches_1_20_60.set(Settings::enable_keyboard_autofocus_paste_patches_1_20_60);
     ::enable_intel_sprint_strafe_patch.set(Settings::enable_intel_sprint_strafe_patch);
     ::enable_menubar.set(Settings::enable_menubar);
 

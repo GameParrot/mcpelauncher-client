@@ -343,16 +343,154 @@ void MainActivity::saveFile(std::shared_ptr<FakeJni::JString> fileName) {
     }
 }
 
+KeyCode mapAndroidToMinecraftKey(int keyCode) {
+    if(keyCode >= AKEYCODE_F1 && keyCode <= AKEYCODE_F12)
+        return (KeyCode)(keyCode - AKEYCODE_F1 + (int)KeyCode::FN1);
+    if(keyCode >= AKEYCODE_0 && keyCode <= AKEYCODE_9)
+        return (KeyCode)(keyCode - AKEYCODE_0 + (int)KeyCode::NUM_0);
+    if(keyCode >= AKEYCODE_NUMPAD_0 && keyCode <= AKEYCODE_NUMPAD_9)
+        return (KeyCode)(keyCode - AKEYCODE_NUMPAD_0 + (int)KeyCode::NUMPAD_0);
+    if(keyCode >= AKEYCODE_A && keyCode <= AKEYCODE_Z)
+        return (KeyCode)(keyCode - AKEYCODE_A + (int)KeyCode::A);
+    switch(keyCode) {
+    case AKEYCODE_DEL:
+        return KeyCode::BACKSPACE;
+    case AKEYCODE_TAB:
+        return KeyCode::TAB;
+    case AKEYCODE_ENTER:
+        return KeyCode::ENTER;
+    case AKEYCODE_SHIFT_LEFT:
+        return KeyCode::LEFT_SHIFT;
+    case AKEYCODE_SHIFT_RIGHT:
+        return KeyCode::RIGHT_SHIFT;
+    case AKEYCODE_CTRL_LEFT:
+        return KeyCode::LEFT_CTRL;
+    case AKEYCODE_CTRL_RIGHT:
+        return KeyCode::RIGHT_CTRL;
+    case AKEYCODE_BREAK:
+        return KeyCode::PAUSE;
+    case AKEYCODE_CAPS_LOCK:
+        return KeyCode::CAPS_LOCK;
+    case AKEYCODE_ESCAPE:
+        return KeyCode::ESCAPE;
+    case AKEYCODE_PAGE_UP:
+        return KeyCode::PAGE_UP;
+    case AKEYCODE_PAGE_DOWN:
+        return KeyCode::PAGE_DOWN;
+    case AKEYCODE_MOVE_END:
+        return KeyCode::END;
+    case AKEYCODE_MOVE_HOME:
+        return KeyCode::HOME;
+    case AKEYCODE_DPAD_LEFT:
+        return KeyCode::LEFT;
+    case AKEYCODE_DPAD_UP:
+        return KeyCode::UP;
+    case AKEYCODE_DPAD_RIGHT:
+        return KeyCode::RIGHT;
+    case AKEYCODE_DPAD_DOWN:
+        return KeyCode::DOWN;
+    case AKEYCODE_INSERT:
+        return KeyCode::INSERT;
+    case AKEYCODE_FORWARD_DEL:
+        return KeyCode::DELETE;
+    case AKEYCODE_NUM_LOCK:
+        return KeyCode::NUM_LOCK;
+    case AKEYCODE_SCROLL_LOCK:
+        return KeyCode::SCROLL_LOCK;
+    case AKEYCODE_SEMICOLON:
+        return KeyCode::SEMICOLON;
+    case AKEYCODE_EQUALS:
+        return KeyCode::EQUAL;
+    case AKEYCODE_COMMA:
+        return KeyCode::COMMA;
+    case AKEYCODE_MINUS:
+        return KeyCode::MINUS;
+    case AKEYCODE_PERIOD:
+        return KeyCode::PERIOD;
+    case AKEYCODE_SLASH:
+        return KeyCode::SLASH;
+    case AKEYCODE_GRAVE:
+        return KeyCode::GRAVE;
+    case AKEYCODE_LEFT_BRACKET:
+        return KeyCode::LEFT_BRACKET;
+    case AKEYCODE_BACKSLASH:
+        return KeyCode::BACKSLASH;
+    case AKEYCODE_RIGHT_BRACKET:
+        return KeyCode::RIGHT_BRACKET;
+    case AKEYCODE_APOSTROPHE:
+        return KeyCode::APOSTROPHE;
+    case AKEYCODE_META_LEFT:
+        return KeyCode::LEFT_SUPER;
+    case AKEYCODE_META_RIGHT:
+        return KeyCode::RIGHT_SUPER;
+    case AKEYCODE_ALT_LEFT:
+        return KeyCode::LEFT_ALT;
+    case AKEYCODE_ALT_RIGHT:
+        return KeyCode::RIGHT_ALT;
+    case AKEYCODE_NUMPAD_ENTER:
+        return KeyCode::ENTER;
+    case AKEYCODE_NUMPAD_SUBTRACT:
+        return KeyCode::NUMPAD_SUBTRACT;
+    case AKEYCODE_NUMPAD_MULTIPLY:
+        return KeyCode::NUMPAD_MULTIPLY;
+    case AKEYCODE_NUMPAD_ADD:
+        return KeyCode::NUMPAD_ADD;
+    case AKEYCODE_NUMPAD_DIVIDE:
+        return KeyCode::NUMPAD_DIVIDE;
+    case AKEYCODE_NUMPAD_DOT:
+        return KeyCode::NUMPAD_DECIMAL;
+    }
+    if(keyCode < 256)
+        return (KeyCode)keyCode;
+    return KeyCode::UNKNOWN;
+}
+
+int mapAndroidMeta(int meta) {
+    int outMeta = 0;
+    if(meta & AMETA_SHIFT_ON) {
+        outMeta |= KEY_MOD_SHIFT;
+    }
+    if(meta & AMETA_CTRL_ON) {
+        outMeta |= KEY_MOD_CTRL;
+    }
+    if(meta & AMETA_META_ON) {
+        outMeta |= KEY_MOD_SUPER;
+    }
+    if(meta & AMETA_ALT_ON) {
+        outMeta |= KEY_MOD_ALT;
+    }
+    if(meta & AMETA_CAPS_LOCK_ON) {
+        outMeta |= KEY_MOD_CAPSLOCK;
+    }
+    if(meta & AMETA_NUM_LOCK_ON) {
+        outMeta |= KEY_MOD_NUMLOCK;
+    }
+    return outMeta;
+}
+
 FakeJni::JInt MainActivity::getKeyFromKeyCode(FakeJni::JInt keyCode, FakeJni::JInt metaState, FakeJni::JInt deviceId) {
     if(!Settings::enable_keyboard_autofocus_patches_1_20_60) {
         return 0;
     }
+
+#ifdef __APPLE__
+    int modCTRL = metaState & AMETA_META_ON;
+#else
+    int modCTRL = metaState & AMETA_CTRL_ON;
+#endif
+    if(modCTRL && keyCode == AKEYCODE_V && (!textInput || !textInput->isEnabled())) {
+        if(Settings::enable_keyboard_autofocus_paste_patches_1_20_60) {
+            CorePatches::setPendingDelayedPaste();
+            return 'v';
+        }
+        return 0;
+    }
+
     if(keyCode >= AKEYCODE_F1 && keyCode <= AKEYCODE_F12) {
         return 0;
     }
     auto ret = lastChar;
     switch(keyCode) {
-    case AKEYCODE_DEL:
     case AKEYCODE_FORWARD_DEL:
     case AKEYCODE_SHIFT_LEFT:
     case AKEYCODE_SHIFT_RIGHT:
@@ -379,6 +517,12 @@ FakeJni::JInt MainActivity::getKeyFromKeyCode(FakeJni::JInt keyCode, FakeJni::JI
     case AKEYCODE_UNKNOWN:
         return 0;
     }
+
+    uint32_t gameWindowKeycode = window->getKeyFromKeyCode(mapAndroidToMinecraftKey(keyCode), mapAndroidMeta(metaState));
+    if(gameWindowKeycode != 0) {
+        return gameWindowKeycode;
+    }
+
     lastChar = 0;
     return ret;
 }

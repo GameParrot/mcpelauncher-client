@@ -91,11 +91,9 @@ void TextInputHandler::onTextInput(std::string const &text) {
     caretPositionCallback(getCursorPosition());
 }
 
-void TextInputHandler::onKeyPressed(KeyCode key, KeyAction action) {
-    if(key == KeyCode::LEFT_SHIFT || key == KeyCode::RIGHT_SHIFT)
-        shiftPressed = (action != KeyAction::RELEASE);
-    if(key == KeyCode::LEFT_ALT || key == KeyCode::RIGHT_ALT)
-        altPressed = (action != KeyAction::RELEASE);
+void TextInputHandler::onKeyPressed(KeyCode key, KeyAction action, int mods) {
+    bool shiftPressed = mods & KEY_MOD_SHIFT;
+    altPressed = mods & KEY_MOD_ALT;
 
     if(action != KeyAction::PRESS && action != KeyAction::REPEAT)
         return;

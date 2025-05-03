@@ -52,9 +52,9 @@ private:
     int32_t buttonState = 0;
     KeyCode lastKey = (KeyCode)0;
     size_t lastEnabledNo = 0;
-    int32_t metaState = 0;
+    uint8_t delayedPaste = 0;
+    std::string lastPasteStr = "";
     bool useDirectMouseInput, useDirectKeyboardInput;
-    bool modCTRL = false;
     bool needsQueueGamepadInput = true;
     bool sendEvents = false;
     bool cursorLocked = false;
@@ -108,7 +108,7 @@ public:
     void onTouchStart(int id, double x, double y);
     void onTouchUpdate(int id, double x, double y);
     void onTouchEnd(int id, double x, double y);
-    void onKeyboard(KeyCode key, KeyAction action);
+    void onKeyboard(KeyCode key, KeyAction action, int mods);
     void onKeyboardText(std::string const &c);
     void onDrop(std::string const &path);
     void onPaste(std::string const &str);
@@ -120,6 +120,8 @@ public:
     void addMouseButtonCallback(void *user, bool (*callback)(void *user, double x, double y, int button, int action));
     void addMousePositionCallback(void *user, bool (*callback)(void *user, double x, double y, bool relative));
     void addMouseScrollCallback(void *user, bool (*callback)(void *user, double x, double y, double dx, double dy));
+
+    void setDelayedPaste();
 
     static int mapMouseButtonToAndroid(int btn);
     static int mapMinecraftToAndroidKey(KeyCode code);

@@ -20,3 +20,6 @@ static inline void trim(std::string &s) {
     ltrim(s);
     rtrim(s);
 }
+
+bool ReadEnvFlag(const char *name, bool def = false);
+int ReadEnvInt(const char *name, int def = 0);

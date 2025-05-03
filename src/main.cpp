@@ -27,6 +27,9 @@
 #include <mcpelauncher/linker.h>
 #include <minecraft/imported/android_symbols.h>
 #include "main.h"
+#ifdef HAVE_SDL3AUDIO
+#include "fake_audio.h"
+#endif
 #include "fake_looper.h"
 #include "fake_window.h"
 #include "fake_assetmanager.h"
@@ -67,6 +70,21 @@ LauncherOptions options;
 void printVersionInfo();
 
 void loadGameOptions();
+
+template <const char** names, class>
+class SmartStub;
+template <const char** names, size_t... I>
+class SmartStub<names, std::integer_sequence<size_t, I...>> {
+public:
+    template <size_t i>
+    static int Add(std::unordered_map<std::string, void*>& android_syms) {
+        android_syms.insert({names[i], (void*)+[]() { Log::warn("Main", "Android stub %s called", names[i]); }});
+        return 0;
+    }
+    static void AddAll(std::unordered_map<std::string, void*>& android_syms) {
+        int a[] = {Add<I>(android_syms)...};
+    }
+};
 
 int main(int argc, char* argv[]) {
     if(argc == 2 && argv[1][0] != '-') {
@@ -344,12 +362,22 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
         return 1;
     }
     linker::update_LD_LIBRARY_PATH(PathHelper::findGameFile(std::string("lib/") + MinecraftUtils::getLibraryAbi()).data());
+    bool fmodLoaded = false;
     if(!disableFmod) {
         try {
             MinecraftUtils::loadFMod();
+            fmodLoaded = true;
         } catch(std::exception& e) {
             Log::info("FMOD", "Failed to load host libfmod: '%s', use pulseaudio/sdl3 backend with android fmod if available", e.what());
         }
+    }
+    if(!fmodLoaded) {
+#ifdef HAVE_SDL3AUDIO
+        SDL_Init(SDL_INIT_AUDIO);
+        SDL_SetHint(SDL_HINT_AUDIO_DEVICE_APP_ICON_NAME, "mcpelauncher-ui-qt");
+        SDL_SetHint(SDL_HINT_AUDIO_DEVICE_STREAM_NAME, "Minecraft");
+        FakeAudio::updateDefaults();
+#endif
     }
     FakeEGL::setProcAddrFunction((void* (*)(const char*))windowManager->getProcAddrFunc());
     FakeEGL::installLibrary();
@@ -371,10 +399,15 @@ Hardware	: Qualcomm Technologies, Inc MSM8998
     FakeInputQueue::initHybrisHooks(android_syms);
     FakeLooper::initHybrisHooks(android_syms);
     FakeWindow::initHybrisHooks(android_syms);
-    for(auto s = android_symbols; *s; s++)  // stub missing symbols
-        android_syms.insert({*s, (void*)+[]() { Log::warn("Main", "Android stub called"); }});
+    SmartStub<android_symbols, std::make_index_sequence<(sizeof(android_symbols) / sizeof(*android_symbols)) - 1>>::AddAll(android_syms);
     linker::load_library("libandroid.so", android_syms);
     CorePatches::loadGameWindowLibrary();
+
+#ifdef HAVE_SDL3AUDIO
+    std::unordered_map<std::string, void*> audio_syms;
+    FakeAudio::initHybrisHooks(audio_syms);
+    linker::load_library("libaaudio.so", audio_syms);
+#endif
 
     linker::load_library("libmcpelauncher_menu.so", {
                                                         {"mcpelauncher_addmenu", (void*)mcpelauncher_addmenu},

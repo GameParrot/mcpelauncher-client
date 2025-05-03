@@ -12,7 +12,7 @@ public:
     using CaretCallback = std::function<void(int)>;
 
 private:
-    bool enabled = false, multiline = false, shiftPressed = false, altPressed = false;
+    bool enabled = false, multiline = false, altPressed = false;
     std::string currentText;
     size_t currentTextPosition = 0;
     size_t currentTextPositionUTF = 0;
@@ -44,7 +44,7 @@ public:
 
     void onTextInput(std::string const &val);
 
-    void onKeyPressed(KeyCode key, KeyAction action);
+    void onKeyPressed(KeyCode key, KeyAction action, int mods);
 
     std::string getCopyText() const;
 

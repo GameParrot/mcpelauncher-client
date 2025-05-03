@@ -8,24 +8,7 @@
 #include <cstdlib>
 #include <string>
 #include "settings.h"
-
-static bool ReadEnvFlag(const char* name, bool def = false) {
-    auto val = getenv(name);
-    if(!val) {
-        return def;
-    }
-    std::string sval = val;
-    return sval == "true" || sval == "1" || sval == "on";
-}
-
-static int ReadEnvInt(const char* name, int def = 0) {
-    auto val = getenv(name);
-    if(!val) {
-        return def;
-    }
-    std::string sval = val;
-    return std::stoi(sval);
-}
+#include "util.h"
 
 WindowCallbacks::WindowCallbacks(GameWindow& window, JniSupport& jniSupport, FakeInputQueue& inputQueue) : window(window), jniSupport(jniSupport), inputQueue(inputQueue) {
     useDirectMouseInput = Mouse::feed;
@@ -50,7 +33,7 @@ void WindowCallbacks::registerCallbacks() {
     window.setTouchStartCallback(std::bind(&WindowCallbacks::onTouchStart, this, _1, _2, _3));
     window.setTouchUpdateCallback(std::bind(&WindowCallbacks::onTouchUpdate, this, _1, _2, _3));
     window.setTouchEndCallback(std::bind(&WindowCallbacks::onTouchEnd, this, _1, _2, _3));
-    window.setKeyboardCallback(std::bind(&WindowCallbacks::onKeyboard, this, _1, _2));
+    window.setKeyboardCallback(std::bind(&WindowCallbacks::onKeyboard, this, _1, _2, _3));
     window.setKeyboardTextCallback(std::bind(&WindowCallbacks::onKeyboardText, this, _1));
     window.setDropCallback(std::bind(&WindowCallbacks::onDrop, this, _1));
     window.setPasteCallback(std::bind(&WindowCallbacks::onPaste, this, _1));
@@ -71,6 +54,13 @@ void WindowCallbacks::startSendEvents() {
         int w, h;
         window.getWindowSize(w, h);
         onWindowSizeCallback(w, h);
+    }
+    if(delayedPaste > 0) {
+        delayedPaste--;
+        if(delayedPaste == 0) {
+            jniSupport.getTextInputHandler().onTextInput("\x08");
+            jniSupport.getTextInputHandler().onTextInput(lastPasteStr);
+        }
     }
 }
 
@@ -156,7 +146,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
                     window.stopTextInput();
                 }
             }
-            if(io.WantCaptureMouse) {
+            if(io.WantCaptureMouse && !window.getCursorDisabled()) {
                 return;
             }
         }
@@ -171,7 +161,7 @@ void WindowCallbacks::onMouseButton(double x, double y, int btn, MouseButtonActi
         }
         if(btn > 3) {
             // Seems to get recognized same as regular Mousebuttons as Button4 or higher, but ignored from mouse
-            return onKeyboard((KeyCode)btn, action == MouseButtonAction::PRESS ? KeyAction::PRESS : KeyAction::RELEASE);
+            return onKeyboard((KeyCode)btn, action == MouseButtonAction::PRESS ? KeyAction::PRESS : KeyAction::RELEASE, 0);
         }
         if(useDirectMouseInput)
             Mouse::feed((char)btn, (char)(action == MouseButtonAction::PRESS ? 1 : 0), (short)x, (short)(y - Settings::menubarsize), 0, 0);
@@ -209,7 +199,7 @@ void WindowCallbacks::onMousePosition(double x, double y) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(x, y);
-            if(io.WantCaptureMouse) {
+            if(io.WantCaptureMouse && !window.getCursorDisabled()) {
                 return;
             }
         }
@@ -266,7 +256,7 @@ void WindowCallbacks::onMouseScroll(double x, double y, double dx, double dy) {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
             io.AddMouseWheelEvent(dx, dy);
-            if(io.WantCaptureMouse) {
+            if(io.WantCaptureMouse && !window.getCursorDisabled()) {
                 return;
             }
         }
@@ -525,7 +515,7 @@ static ImGuiKey mapImGuiModKey(KeyCode code) {
 }
 #endif
 
-void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
+void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action, int mods) {
     if(hasInputMode(InputMode::Mouse)) {
         if(keyboardCallbacksLock.try_lock()) {
             for(size_t i = 0; i < keyboardCallbacks.size(); i++) {
@@ -554,19 +544,19 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
             }
         }
 #endif
-        // return onKeyboard((KeyCode) 4, KeyAction::PRESS);
-        // key = (KeyCode) 0x21;
+// return onKeyboard((KeyCode) 4, KeyAction::PRESS);
+// key = (KeyCode) 0x21;
 #ifdef __APPLE__
-        if(key == KeyCode::LEFT_SUPER || key == KeyCode::RIGHT_SUPER)
+        int modCTRL = mods & KEY_MOD_SUPER;
 #else
-        if(key == KeyCode::LEFT_CTRL || key == KeyCode::RIGHT_CTRL)
+        int modCTRL = mods & KEY_MOD_CTRL;
 #endif
-            modCTRL = (action != KeyAction::RELEASE);
+        modCTRL = (action != KeyAction::RELEASE);
 
         if(modCTRL && key == KeyCode::C && jniSupport.getTextInputHandler().getCopyText() != "") {
             window.setClipboardText(jniSupport.getTextInputHandler().getCopyText());
         } else {
-            jniSupport.getTextInputHandler().onKeyPressed(key, action);
+            jniSupport.getTextInputHandler().onKeyPressed(key, action, mods);
         }
 
         if(key == KeyCode::FN11 && action == KeyAction::PRESS)
@@ -595,59 +585,24 @@ void WindowCallbacks::onKeyboard(KeyCode key, KeyAction action) {
         }
 
         int32_t state = 0;
-        switch(key) {
-        case KeyCode::LEFT_SHIFT:
-            state |= AMETA_SHIFT_LEFT_ON | AMETA_SHIFT_ON;
-            break;
-        case KeyCode::RIGHT_SHIFT:
-            state |= AMETA_SHIFT_RIGHT_ON | AMETA_SHIFT_ON;
-            break;
-        case KeyCode::LEFT_ALT:
-            state |= AMETA_ALT_LEFT_ON | AMETA_ALT_ON;
-            break;
-        case KeyCode::RIGHT_ALT:
-            state |= AMETA_ALT_RIGHT_ON | AMETA_ALT_ON;
-            break;
-        case KeyCode::LEFT_CTRL:
-            state |= AMETA_CTRL_LEFT_ON | AMETA_CTRL_ON;
-            break;
-        case KeyCode::RIGHT_CTRL:
-            state |= AMETA_CTRL_RIGHT_ON | AMETA_CTRL_ON;
-            break;
-        case KeyCode::LEFT_SUPER:
-            state |= AMETA_META_LEFT_ON | AMETA_META_ON;
-            break;
-        case KeyCode::RIGHT_SUPER:
-            state |= AMETA_META_RIGHT_ON | AMETA_META_ON;
-            break;
-        case KeyCode::CAPS_LOCK:
-            state |= AMETA_CAPS_LOCK_ON;
-            break;
-        default:
-            break;
-        }
-        if(action == KeyAction::PRESS) {
-            this->metaState |= state;
-        } else {
-            this->metaState &= ~state;
-        }
 
-        if(Settings::enable_keyboard_tab_patches_1_20_60 && state == 0) {
-            if(jniSupport.getTextInputHandler().isEnabled() && !jniSupport.getTextInputHandler().isMultiline()) {
-                if(action == KeyAction::PRESS && (lastKey == KeyCode::TAB || lastKey == KeyCode::UP || lastKey == KeyCode::DOWN) && !(key == KeyCode::TAB || key == KeyCode::UP || key == KeyCode::DOWN || key == KeyCode::ENTER || key == KeyCode::ESCAPE) && lastEnabledNo == jniSupport.getTextInputHandler().getEnabledNo()) {
-                    if(!deadKey(key)) {
-                        jniSupport.getTextInputHandler().setKeepLastCharOnce();
-                    }
-                    jniSupport.onBackPressed();
-                    inputQueue.addEvent(FakeKeyEvent(AKEY_EVENT_ACTION_DOWN, mapMinecraftToAndroidKey(KeyCode::ENTER), 0));
-                    inputQueue.addEvent(FakeKeyEvent(AKEY_EVENT_ACTION_UP, mapMinecraftToAndroidKey(KeyCode::ENTER), 0));
-                }
-                lastKey = key;
-                lastEnabledNo = jniSupport.getTextInputHandler().getEnabledNo();
-            } else {
-                lastKey = (KeyCode)0;
-                lastEnabledNo = 0;
-            }
+        if(mods & KEY_MOD_SHIFT) {
+            state |= AMETA_SHIFT_ON;
+        }
+        if(mods & KEY_MOD_ALT) {
+            state |= AMETA_ALT_ON;
+        }
+        if(mods & KEY_MOD_CTRL) {
+            state |= AMETA_CTRL_ON;
+        }
+        if(mods & KEY_MOD_SUPER) {
+            state |= AMETA_META_ON;
+        }
+        if(mods & KEY_MOD_CAPSLOCK) {
+            state |= AMETA_CAPS_LOCK_ON;
+        }
+        if(mods & KEY_MOD_NUMLOCK) {
+            state |= AMETA_NUM_LOCK_ON;
         }
 
         if(jniSupport.isGameActivityVersion()) {
@@ -691,6 +646,9 @@ void WindowCallbacks::onPaste(std::string const& str) {
 #ifdef USE_IMGUI
     Settings::clipboard = str;
 #endif
+    if(Settings::enable_keyboard_autofocus_paste_patches_1_20_60) {
+        lastPasteStr = str;
+    }
     jniSupport.getTextInputHandler().onTextInput(str);
 }
 void WindowCallbacks::onGamepadState(int gamepad, bool connected) {
@@ -855,6 +813,10 @@ void WindowCallbacks::addMouseScrollCallback(void* user, bool (*callback)(void* 
     mouseScrollCallbacksLock.lock();
     mouseScrollCallbacks.emplace_back(MouseScrollCallback{.user = user, .callback = callback});
     mouseScrollCallbacksLock.unlock();
+}
+
+void WindowCallbacks::setDelayedPaste() {
+    delayedPaste = 2;
 }
 
 void WindowCallbacks::loadGamepadMappings() {

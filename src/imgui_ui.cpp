@@ -437,12 +437,12 @@ void ImGuiUIDrawFrame(GameWindow* window) {
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("Mods")) {
-            if(ImGui::MenuItem("Enable Keyboard Tab/Up/Down Patches for 1.20.60+", nullptr, Settings::enable_keyboard_tab_patches_1_20_60)) {
-                Settings::enable_keyboard_tab_patches_1_20_60 ^= true;
-                Settings::save();
-            }
             if(ImGui::MenuItem("Enable Keyboard AutoFocus Patches for 1.20.60+", nullptr, Settings::enable_keyboard_autofocus_patches_1_20_60)) {
                 Settings::enable_keyboard_autofocus_patches_1_20_60 ^= true;
+                Settings::save();
+            }
+            if(ImGui::MenuItem("Enable Keyboard AutoFocus Paste Patches for 1.20.60+", nullptr, Settings::enable_keyboard_autofocus_paste_patches_1_20_60, Settings::enable_keyboard_autofocus_patches_1_20_60)) {
+                Settings::enable_keyboard_autofocus_paste_patches_1_20_60 ^= true;
                 Settings::save();
             }
 #ifdef __x86_64__
@@ -517,6 +517,11 @@ void ImGuiUIDrawFrame(GameWindow* window) {
             }
             if(!modes.empty()) {
                 ImGui::Separator();
+            }
+            if(ImGui::MenuItem("Default", nullptr, Settings::videoMode == "")) {
+                window->setFullscreenMode(FullscreenMode{.id = -1, .description = ""});
+                Settings::videoMode = "";
+                Settings::save();
             }
             for(auto&& mode : modes) {
                 if(ImGui::MenuItem(mode.description.data(), nullptr, mode.id == window->getFullscreenMode().id)) {
