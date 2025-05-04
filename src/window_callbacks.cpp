@@ -107,7 +107,7 @@ bool WindowCallbacks::hasInputMode(WindowCallbacks::InputMode want, bool changeM
             printf("Input Mode changed to %d\n", (int)want);
 #endif
             if(want == InputMode::Mouse) {
-                window.setCursorDisabled(false);
+                window.setCursorDisabled(cursorLocked);
             } else {
                 window.setCursorDisabled(true);
             }
