@@ -24,6 +24,7 @@ struct Settings {
     static std::string menubarFocusKey;
 
     static bool fullscreen;
+    static bool vsync;
 
     static std::string getPath();
     static void load();

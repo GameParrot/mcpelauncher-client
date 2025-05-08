@@ -14,6 +14,10 @@
 #ifdef USE_ARMHF_SUPPORT
 #include "armhf_support.h"
 #endif
+
+std::vector<FakeEGL::SwapBuffersCallback> FakeEGL::swapBuffersCallbacks = {};
+std::mutex FakeEGL::swapBuffersCallbacksLock;
+
 namespace fake_egl {
 
 static thread_local EGLSurface currentDrawSurface;
@@ -97,7 +101,7 @@ EGLBoolean eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read, 
     if(draw != nullptr) {
         ((GameWindow *)draw)->makeCurrent(true);
 #ifdef USE_IMGUI
-        ImGuiUIInit((GameWindow*)draw);
+        ImGuiUIInit((GameWindow *)draw);
 #endif
     } else {
         ((GameWindow *)currentDrawSurface)->makeCurrent(false);
@@ -107,16 +111,22 @@ EGLBoolean eglMakeCurrent(EGLDisplay display, EGLSurface draw, EGLSurface read, 
 }
 
 EGLBoolean eglSwapBuffers(EGLDisplay display, EGLSurface surface) {
+    if(FakeEGL::swapBuffersCallbacksLock.try_lock()) {
+        for(size_t i = 0; i < FakeEGL::swapBuffersCallbacks.size(); i++) {
+            FakeEGL::swapBuffersCallbacks[i].callback(FakeEGL::swapBuffersCallbacks[i].user, display, surface);
+        }
+        FakeEGL::swapBuffersCallbacksLock.unlock();
+    }
     //    Log::trace("FakeEGL", "eglSwapBuffers");
 #ifdef USE_IMGUI
-    ImGuiUIDrawFrame((GameWindow*)surface);
+    ImGuiUIDrawFrame((GameWindow *)surface);
 #endif
     ((GameWindow *)surface)->swapBuffers();
     return EGL_TRUE;
 }
 
 EGLBoolean eglSwapInterval(EGLDisplay display, EGLint interval) {
-    ((GameWindow *)currentDrawSurface)->setSwapInterval(interval);
+    //((GameWindow *)currentDrawSurface)->setSwapInterval(interval);
     return EGL_TRUE;
 }
 
@@ -144,6 +154,12 @@ bool FakeEGL::enableTexturePatch = false;
 
 void FakeEGL::setProcAddrFunction(void *(*fn)(const char *)) {
     fake_egl::hostProcAddrFn = fn;
+}
+
+void FakeEGL::addSwapBuffersCallback(void *user, void (*callback)(void *user, EGLDisplay display, EGLSurface surface)) {
+    swapBuffersCallbacksLock.lock();
+    swapBuffersCallbacks.emplace_back(SwapBuffersCallback{.user = user, .callback = callback});
+    swapBuffersCallbacksLock.unlock();
 }
 
 void FakeEGL::installLibrary() {
@@ -177,13 +193,13 @@ void FakeEGL::setupGLOverrides() {
     ArmhfSupport::install(fake_egl::hostProcOverrides);
 #endif
     // fake_egl::hostProcOverrides["glViewport"] = (void *)+[](int x,
- 	// int y,
- 	// int width,
- 	// int height) {
+    // int y,
+    // int width,
+    // int height) {
     //     ((void (*)(int x,
- 	// int y,
- 	// int width,
- 	// int height))(fake_egl::hostProcAddrFn("glViewport")))(x, y, width, height);
+    // int y,
+    // int width,
+    // int height))(fake_egl::hostProcAddrFn("glViewport")))(x, y, width, height);
 
     // };
     // MESA 23.1 blackscreen Workaround Start for 1.18.30+, bgfy will disable the extension and the game works
