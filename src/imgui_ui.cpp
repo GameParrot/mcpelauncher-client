@@ -291,6 +291,7 @@ bool canShowHud(int visibilityOption) {
 }
 
 void ImGuiUIInit(GameWindow* window) {
+    window->setSwapInterval(Settings::vsync ? 1 : 0);
     if(!glGetString) {
         return;
     }
@@ -509,6 +510,12 @@ void ImGuiUIDrawFrame(GameWindow* window) {
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("Video")) {
+            if(ImGui::MenuItem("Use VSync", nullptr, Settings::vsync)) {
+                Settings::vsync = !Settings::vsync;
+                Settings::save();
+                window->setSwapInterval(Settings::vsync ? 1 : 0);
+            }
+
             auto modes = window->getFullscreenModes();
             if(ImGui::MenuItem("Toggle Fullscreen", nullptr, window->getFullscreen())) {
                 window->setFullscreen(!Settings::fullscreen);

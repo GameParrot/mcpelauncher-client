@@ -137,6 +137,8 @@ BEGIN_NATIVE_DESCRIPTOR(MainActivity){Constructor<MainActivity>{}},
     {Function<&MainActivity::getKeyFromKeyCode>{}, "getKeyFromKeyCode"},
     {Function<&MainActivity::supportsSizeQuery>{}, "supportsSizeQuery"},
     {Function<&MainActivity::getAllocatableBytes>{}, "getAllocatableBytes"},
+    {Function<&MainActivity::calculateAvailableDiskFreeSpace>{}, "calculateAvailableDiskFreeSpace"},
+    {Function<&MainActivity::getUsableSpace>{}, "getUsableSpace"},
     END_NATIVE_DESCRIPTOR
 
     BEGIN_NATIVE_DESCRIPTOR(AccountManager){Function<&AccountManager::get>{}, "get"},

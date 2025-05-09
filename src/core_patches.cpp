@@ -1,4 +1,5 @@
 #include "core_patches.h"
+#include "fake_egl.h"
 
 #include <mcpelauncher/linker.h>
 #include <mcpelauncher/patch_utils.h>
@@ -88,6 +89,10 @@ void CorePatches::loadGameWindowLibrary() {
 
     syms["game_window_add_window_creation_callback"] = (void*)+[](void* user, void (*onCreated)(void* user)) {
         onWindowCreatedCallbacks.emplace_back(std::bind(onCreated, user));
+    };
+
+    syms["game_window_add_swap_buffers_callback"] = (void*)+[](void* user, void (*callback)(void* user, EGLDisplay display, EGLSurface surface)) {
+        FakeEGL::addSwapBuffersCallback(user, callback);
     };
 
     linker::load_library("libmcpelauncher_gamewindow.so", syms);
