@@ -667,7 +667,7 @@ void WindowCallbacks::onGamepadState(int gamepad, bool connected) {
 }
 
 void WindowCallbacks::queueGamepadAxisInputIfNeeded(int gamepad) {
-    if(!needsQueueGamepadInput)
+    if(!needsQueueGamepadInput && !jniSupport.isGameActivityVersion())
         return;
     if(jniSupport.isGameActivityVersion()) {
         auto gpi = gamepads.find(gamepad);
